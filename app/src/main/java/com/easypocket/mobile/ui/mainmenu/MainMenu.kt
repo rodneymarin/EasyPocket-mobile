@@ -117,6 +117,7 @@ fun MainMenu(
         )
         Box(
             modifier = Modifier
+                .align(Alignment.CenterEnd)
                 .offset { IntOffset(offset.value.roundToInt(), 0) }
                 .width(panelWidth)
                 .fillMaxHeight()
