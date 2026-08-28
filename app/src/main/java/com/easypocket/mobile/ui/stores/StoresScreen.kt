@@ -64,7 +64,7 @@ import kotlinx.coroutines.launch
 private const val SEARCH_DEBOUNCE_MS = 300L
 
 @Composable
-fun StoresScreen(navController: NavController, onMenuClick: () -> Unit) {
+fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshTick: Int = 0) {
     val vm: StoreListViewModel = hiltViewModel()
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
@@ -75,7 +75,7 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit) {
     var searchText by rememberSaveable { mutableStateOf("") }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { vm.refresh() }
+    LaunchedEffect(refreshTick) { vm.refresh() }
 
     LaunchedEffect(searchText) {
         delay(SEARCH_DEBOUNCE_MS)

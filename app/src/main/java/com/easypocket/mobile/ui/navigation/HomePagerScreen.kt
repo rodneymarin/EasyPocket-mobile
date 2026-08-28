@@ -28,6 +28,7 @@ private const val PAGE_COUNT = 3
 @Composable
 fun HomePagerScreen(vm: AppViewModel, navController: NavController) {
     val language by vm.language.collectAsStateWithLifecycle()
+    val refreshTick by vm.refreshTick.collectAsStateWithLifecycle()
     val labels = listOf(
         t("tab.lists", language),
         t("tab.products", language),
@@ -63,14 +64,17 @@ fun HomePagerScreen(vm: AppViewModel, navController: NavController) {
                 0 -> ListsScreen(
                     navController = navController,
                     onMenuClick = { vm.openMenu() },
+                    refreshTick = refreshTick,
                 )
                 1 -> ProductsScreen(
                     navController = navController,
                     onMenuClick = { vm.openMenu() },
+                    refreshTick = refreshTick,
                 )
                 2 -> StoresScreen(
                     navController = navController,
                     onMenuClick = { vm.openMenu() },
+                    refreshTick = refreshTick,
                 )
             }
         }

@@ -11,6 +11,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,6 +34,9 @@ class AppViewModel @Inject constructor(
     private val _menuVisible = MutableStateFlow(false)
     val menuVisible: StateFlow<Boolean> = _menuVisible
 
+    private val _refreshTick = MutableStateFlow(0)
+    val refreshTick: StateFlow<Int> = _refreshTick.asStateFlow()
+
     init { init() }
 
     fun init() {
@@ -47,6 +51,7 @@ class AppViewModel @Inject constructor(
 
     fun openMenu() { _menuVisible.value = true }
     fun closeMenu() { _menuVisible.value = false }
+    fun notifyDataChanged() { _refreshTick.value += 1 }
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
     fun setLanguage(language: Language) = viewModelScope.launch { settings.setLanguage(language) }
     fun resetToSeed() = viewModelScope.launch {

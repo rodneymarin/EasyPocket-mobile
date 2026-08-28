@@ -1,6 +1,7 @@
 package com.easypocket.mobile.i18n
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class TranslationsTest {
@@ -46,6 +47,21 @@ class TranslationsTest {
     fun `export and import keys are kept`() {
         assertEquals("Export data", t("menu.exportData", Language.ENGLISH))
         assertEquals("Import data", t("menu.importData", Language.ENGLISH))
+    }
+
+    @Test
+    fun `backup keys are translated in both languages`() {
+        listOf(
+            "backup.exportSuccess",
+            "backup.exportError",
+            "backup.importSuccess",
+            "backup.importError",
+            "backup.importWarning.title",
+            "backup.importWarning.message",
+        ).forEach { key ->
+            assertNotEquals(key, t(key, Language.ENGLISH))
+            assertNotEquals(key, t(key, Language.SPANISH))
+        }
     }
 
     @Test

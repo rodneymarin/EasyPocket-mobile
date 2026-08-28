@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
 private const val SEARCH_DEBOUNCE_MS = 300L
 
 @Composable
-fun ListsScreen(navController: NavController, onMenuClick: () -> Unit) {
+fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTick: Int = 0) {
     val vm: ListListViewModel = hiltViewModel()
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
@@ -79,7 +79,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit) {
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
     var listToDelete by remember { mutableStateOf<ListCardData?>(null) }
 
-    LaunchedEffect(Unit) { vm.refresh() }
+    LaunchedEffect(refreshTick) { vm.refresh() }
 
     LaunchedEffect(searchText) {
         delay(SEARCH_DEBOUNCE_MS)
