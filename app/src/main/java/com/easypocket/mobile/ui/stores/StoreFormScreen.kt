@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -35,8 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +46,7 @@ import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
+import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
 import com.easypocket.mobile.ui.theme.LocalAppColors
@@ -223,31 +220,11 @@ private fun StoreNameInput(
     onValueChange: (String) -> Unit,
     placeholder: String,
 ) {
-    val appColors = LocalAppColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            if (value.isEmpty()) {
-                Text(placeholder, color = appColors.placeholderText, fontSize = 14.sp)
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
-                cursorBrush = SolidColor(appColors.primary),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
-        }
-    }
+    FormTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+    )
 }
 
 @Composable
@@ -280,7 +257,7 @@ private fun ColorSwatches(selected: Int, onSelect: (Int) -> Unit) {
                     .background(StoreColors.get(index, isDark))
                     .then(
                         if (selected == index) {
-                            Modifier.border(3.dp, appColors.primary, CircleShape)
+                            Modifier.border(3.dp, appColors.text, CircleShape)
                         } else {
                             Modifier
                         },

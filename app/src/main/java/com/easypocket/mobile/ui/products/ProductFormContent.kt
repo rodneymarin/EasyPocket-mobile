@@ -49,6 +49,7 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.ButtonVariant
+import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.SelectField
 import com.easypocket.mobile.ui.components.SelectOption
@@ -138,7 +139,6 @@ private fun ProductFormFields(
         isError = state.nameError,
         errorMessage = t("toast.productNameExists", language),
     )
-
     Spacer(Modifier.height(16.dp))
     FieldLabel(text = t("products.addModal.unitLabel", language))
     Spacer(Modifier.height(6.dp))
@@ -242,30 +242,12 @@ private fun ProductNameInput(
 ) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(appColors.background)
-                .border(1.dp, if (isError) appColors.destructiveBorder else appColors.border, RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.fillMaxWidth()) {
-                if (value.isEmpty()) {
-                    Text(placeholder, color = appColors.placeholderText, fontSize = 14.sp)
-                }
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    singleLine = true,
-                    textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
-                    cursorBrush = SolidColor(appColors.primary),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                )
-            }
-        }
+        FormTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            isError = isError,
+        )
         if (isError) {
             Spacer(Modifier.height(6.dp))
             Text(errorMessage, color = appColors.destructiveBorder, fontSize = 13.sp)
@@ -287,11 +269,10 @@ private fun PricesSection(
     appColors: AppColors,
 ) {
     Text(
-        t("products.pricesSection", language).uppercase(),
-        color = appColors.textSecondary,
-        fontSize = 13.sp,
+        t("products.pricesSection", language),
+        color = appColors.text,
+        fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.sp,
     )
     Spacer(Modifier.height(8.dp))
 

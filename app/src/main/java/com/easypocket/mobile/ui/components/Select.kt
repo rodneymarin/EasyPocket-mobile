@@ -60,7 +60,7 @@ fun SelectField(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(45.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(appColors.background)
             .border(1.dp, appColors.border, RoundedCornerShape(8.dp))

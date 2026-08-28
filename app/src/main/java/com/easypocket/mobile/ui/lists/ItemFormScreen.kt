@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +51,7 @@ import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
+import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SelectField
@@ -170,25 +167,17 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             Spacer(Modifier.height(16.dp))
             FieldLabel(t("listItem.quantityLabel", language))
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                QuantityInput(
-                    value = uiState.quantityText,
-                    onValueChange = vm::setQuantity,
-                    placeholder = "0",
-                    appColors = appColors,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = uiState.unitLabelKey?.let { key ->
-                        t(key, language).let { label -> if (label != key) label else key.removePrefix("unit.") }
-                    } ?: "",
-                    color = if (selectedProduct != null) appColors.textSecondary else appColors.placeholderText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.width(70.dp),
-                )
-            }
+            FormTextField(
+                value = uiState.quantityText,
+                onValueChange = vm::setQuantity,
+                placeholder = "0",
+                keyboardType = KeyboardType.Decimal,
+                fontSize = 15,
+                trailing = uiState.unitLabelKey?.let { key ->
+                    t(key, language).let { label -> if (label != key) label else key.removePrefix("unit.") }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Spacer(Modifier.height(20.dp))
             PriceSummary(
@@ -353,40 +342,6 @@ private fun ItemFormHeader(title: String, onBack: () -> Unit) {
 private fun FieldLabel(text: String) {
     val appColors = LocalAppColors.current
     Text(text, color = appColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-}
-
-@Composable
-private fun QuantityInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    appColors: com.easypocket.mobile.ui.theme.AppColors,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            if (value.isEmpty()) {
-                Text(placeholder, color = appColors.placeholderText, fontSize = 15.sp)
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = appColors.text, fontSize = 15.sp),
-                cursorBrush = SolidColor(appColors.primary),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
-        }
-    }
 }
 
 @Composable

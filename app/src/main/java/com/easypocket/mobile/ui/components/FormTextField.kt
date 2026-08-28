@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -23,22 +24,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.ui.theme.LocalAppColors
 
 @Composable
-fun SearchInput(
+fun FormTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
-    focusRequester: FocusRequester? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    fontSize: Int = 14,
+    trailing: String? = null,
+    isError: Boolean = false,
 ) {
     val appColors = LocalAppColors.current
     var isFocused by remember { mutableStateOf(false) }
@@ -51,8 +54,12 @@ fun SearchInput(
             .clip(RoundedCornerShape(8.dp))
             .background(appColors.background)
             .border(
-                2.dp,
-                if (isFocused) appColors.primary else appColors.border,
+                if (isFocused) 2.dp else 1.dp,
+                when {
+                    isFocused -> appColors.primary
+                    isError -> appColors.destructiveBorder
+                    else -> appColors.border
+                },
                 RoundedCornerShape(8.dp),
             )
             .padding(horizontal = 11.dp),
@@ -64,23 +71,26 @@ fun SearchInput(
                 .padding(horizontal = 0.dp),
         ) {
             if (value.isEmpty()) {
-                Text(
-                    placeholder,
-                    color = appColors.placeholderText,
-                    fontSize = 14.sp,
-                )
+                Text(placeholder, color = appColors.placeholderText, fontSize = fontSize.sp)
             }
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
-                textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
+                textStyle = TextStyle(color = appColors.text, fontSize = fontSize.sp),
                 cursorBrush = SolidColor(appColors.primary),
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
-                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                     .onFocusChanged { isFocused = it.isFocused },
+            )
+        }
+        if (trailing != null) {
+            Text(
+                text = trailing,
+                color = appColors.textSecondary,
+                fontSize = 15.sp,
             )
         }
         if (hasValue) {
@@ -89,12 +99,10 @@ fun SearchInput(
                 contentDescription = "clear",
                 tint = appColors.textSecondary,
                 modifier = Modifier
+                    .padding(start = 6.dp)
                     .size(18.dp)
-                    .clickableNoIndication { onValueChange("") },
+                    .clickable { onValueChange("") },
             )
         }
     }
 }
-
-private fun Modifier.clickableNoIndication(onClick: () -> Unit): Modifier =
-    this.then(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick))

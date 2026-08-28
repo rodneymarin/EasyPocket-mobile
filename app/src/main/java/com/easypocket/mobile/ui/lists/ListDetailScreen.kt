@@ -623,14 +623,17 @@ private fun DetailItemRow(
                     Text(
                         text = name,
                         color = if (item.done) appColors.placeholderText else appColors.text,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Normal,
                         textDecoration = if (item.done) TextDecoration.LineThrough else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(6.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         if (store != null) {
                             Tag(
                                 text = store.description,
@@ -640,7 +643,7 @@ private fun DetailItemRow(
                         } else {
                             StorelessTag(text = t("listDetail.noStore", language), appColors = appColors)
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.weight(1f))
                         if (price * item.quantity > 0) {
                             Tag(text = "$${formatAmount(price * item.quantity)}", size = TagSize.SM)
                             Spacer(Modifier.width(6.dp))
@@ -648,6 +651,7 @@ private fun DetailItemRow(
                         Tag(text = "${ListLogic.trimQuantity(item.quantity)} $unitLabel", size = TagSize.SM)
                     }
                 }
+                Spacer(Modifier.width(6.dp))
                 if (!isSelectionMode) {
                     CheckCircle(done = item.done, onToggle = onToggleDone, textColor = appColors.primary)
                 }
@@ -669,12 +673,13 @@ private fun StorelessTag(text: String, appColors: com.easypocket.mobile.ui.theme
 
 @Composable
 private fun CheckCircle(done: Boolean, onToggle: () -> Unit, textColor: Color) {
+    val appColors = LocalAppColors.current
     Box(
         modifier = Modifier
             .size(24.dp)
             .clip(CircleShape)
             .background(if (done) textColor else Color.Transparent)
-            .border(if (done) 0.dp else 2.dp, textColor, CircleShape)
+            .border(if (done) 0.dp else 2.dp, if (done) textColor else appColors.textSecondary, CircleShape)
             .clickable(onClick = onToggle),
         contentAlignment = Alignment.Center,
     ) {
