@@ -55,6 +55,9 @@ class AppViewModel @Inject constructor(
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
     fun setLanguage(language: Language) = viewModelScope.launch { settings.setLanguage(language) }
     fun resetToSeed() = viewModelScope.launch {
-        try { seeder.resetToSeed() } catch (t: Throwable) { _fatalError.value = t }
+        try {
+            seeder.resetToSeed()
+            notifyDataChanged()
+        } catch (t: Throwable) { _fatalError.value = t }
     }
 }
