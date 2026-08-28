@@ -138,7 +138,7 @@ class ListDetailViewModel @Inject constructor(
 
     fun copyToClipboard(context: Context, language: Language) {
         val current = _uiState.value.list ?: return
-        val text = ListLogic.clipboardText(current, _uiState.value.productsById, language)
+        val text = ListLogic.clipboardText(current, _uiState.value.productsById, language, _uiState.value.storeFilter)
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("shopping_list", text))
     }

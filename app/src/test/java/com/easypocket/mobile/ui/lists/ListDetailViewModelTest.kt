@@ -193,6 +193,21 @@ class ListDetailViewModelTest {
     }
 
     @Test
+    fun `copyToClipboard respects the active store filter`() = runTest {
+        val vm = createVm()
+        val list = listsRepository.create("Mi lista")
+        listsRepository.addItem(list.id, "prod-001", "store-demo", 2.5)
+        listsRepository.addItem(list.id, "prod-004", "store-test", 1.5)
+        vm.load(list.id)
+        vm.setStoreFilter("store-demo")
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        vm.copyToClipboard(context, Language.SPANISH)
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context).toString()
+        assertEquals("Papa ... 2.5 Kg", text)
+    }
+
+    @Test
     fun `deleteSelected removes exactly selected items`() = runTest {
         val vm = createVm()
         val listId = "aosidoaisud0a89sud0a9sdui"

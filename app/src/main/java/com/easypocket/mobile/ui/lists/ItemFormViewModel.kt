@@ -102,10 +102,20 @@ class ItemFormViewModel @Inject constructor(
         }
     }
 
+    fun clearForm() {
+        originalItem = null
+        _uiState.update { it.copy(isEdit = false, productId = null, storeId = null, quantityText = "1") }
+        recompute()
+    }
+
     suspend fun save(onSaved: () -> Unit) {
         val state = _uiState.value
         if (!state.isQuantityValid || state.productId == null) return
         val listId = this.listId ?: return
+        if (state.products.none { it.id == state.productId }) {
+            _uiState.update { it.copy(productId = null) }
+            return
+        }
         val quantity = state.quantityText.toDouble()
         val storeId = state.storeId
         if (state.isEdit && originalItem != null) {

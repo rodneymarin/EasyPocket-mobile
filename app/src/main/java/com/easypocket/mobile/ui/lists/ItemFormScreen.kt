@@ -156,7 +156,6 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             Spacer(Modifier.height(16.dp))
             FieldLabel(t("listItem.storeLabel", language))
             Spacer(Modifier.height(8.dp))
-            val pricedStoreIds = selectedProduct?.prices?.map { it.storeId }?.toSet() ?: emptySet()
             val storeOptions = listOf(SelectOption("", t("listItem.storeNone", language))) + uiState.stores.map { store ->
                 val price = selectedProduct?.prices?.firstOrNull { it.storeId == store.id }?.value
                 SelectOption(store.id, store.description, trailing = price?.let { "$" + formatAmount(it) })
@@ -288,7 +287,7 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             onDeleted = {
                 showEditProduct = false
                 toast.show(t("toast.productDeleted", language), ToastType.SUCCESS)
-                scope.launch { vm.load(listId, itemId) }
+                vm.clearForm()
             },
             onCancel = { showEditProduct = false },
         )

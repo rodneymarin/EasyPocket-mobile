@@ -40,8 +40,13 @@ object ListLogic {
     fun unitLabelKey(unit: UnitOfMeasurement, quantity: Double): String =
         if (quantity > 1.0) "unit.${unit.raw}.plural" else "unit.${unit.raw}"
 
-    fun clipboardText(list: ShoppingList, productsById: Map<String, Product>, language: Language): String =
-        list.items.joinToString("\n") { item ->
+    fun clipboardText(
+        list: ShoppingList,
+        productsById: Map<String, Product>,
+        language: Language,
+        storeFilter: String? = null,
+    ): String =
+        list.items.filter { matchesFilter(it, storeFilter) }.joinToString("\n") { item ->
             val product = productsById[item.productId]
             val unitLabel = product?.let { unitLabel(it.unitOfMeasurement, item.quantity, language) } ?: ""
             "${product?.productName ?: ""} ... ${trimQuantity(item.quantity)} $unitLabel"

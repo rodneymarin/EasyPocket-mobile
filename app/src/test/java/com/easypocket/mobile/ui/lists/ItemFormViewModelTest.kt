@@ -160,6 +160,62 @@ class ItemFormViewModelTest {
     }
 
     @Test
+    fun `save after edited product is deleted is a no-op and does not insert a dangling item`() = runTest {
+        repos()
+        val listId = "0oasidu0as9dua0sd"
+        val vm = vm()
+        vm.load(listId, -1)
+        vm.selectProduct("prod-001")
+        vm.setStore("store-demo")
+        vm.setQuantity("2")
+        vm.save {}
+        val item = listsRepository.getById(listId)!!.items.first { it.productId == "prod-001" }
+
+        val editVm = vm()
+        editVm.load(listId, item.id)
+        assertTrue(editVm.uiState.value.isEdit)
+        assertEquals("prod-001", editVm.uiState.value.productId)
+
+        productsRepository.deleteAll(listOf("prod-001"))
+        assertTrue(listsRepository.getById(listId)!!.items.none { it.productId == "prod-001" })
+
+        editVm.load(listId, item.id)
+        assertTrue(editVm.uiState.value.isEdit)
+        assertEquals("prod-001", editVm.uiState.value.productId)
+
+        var saved = false
+        editVm.save { saved = true }
+        assertFalse(saved)
+        assertNull(editVm.uiState.value.productId)
+        assertTrue(listsRepository.getById(listId)!!.items.none { it.productId == "prod-001" })
+    }
+
+    @Test
+    fun `clearForm resets selection so save is a no-op`() = runTest {
+        repos()
+        val listId = "0oasidu0as9dua0sd"
+        val vm = vm()
+        vm.load(listId, -1)
+        vm.selectProduct("prod-001")
+        vm.setStore("store-demo")
+        vm.setQuantity("2")
+        vm.save {}
+        val item = listsRepository.getById(listId)!!.items.first { it.productId == "prod-001" }
+
+        val editVm = vm()
+        editVm.load(listId, item.id)
+        assertTrue(editVm.uiState.value.isEdit)
+
+        editVm.clearForm()
+
+        assertNull(editVm.uiState.value.productId)
+        assertNull(editVm.uiState.value.storeId)
+        var saved = false
+        editVm.save { saved = true }
+        assertFalse(saved)
+    }
+
+    @Test
     fun `createProduct creates and selects the product`() = runTest {
         repos()
         val vm = vm()
