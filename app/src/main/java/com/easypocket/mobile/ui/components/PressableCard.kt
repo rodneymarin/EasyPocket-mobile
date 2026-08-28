@@ -30,6 +30,7 @@ fun PressableCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
+    backgroundColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -53,7 +54,7 @@ fun PressableCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .scale(scale)
-            .background(appColors.cardBackground)
+            .background(backgroundColor ?: appColors.cardBackground)
             .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
             .combinedClickable(
                 interactionSource = interactionSource,

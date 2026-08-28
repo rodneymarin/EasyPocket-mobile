@@ -5,12 +5,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.easypocket.mobile.AppViewModel
+import com.easypocket.mobile.ui.lists.ListDetailScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomePagerScreen(vm = vm, navController = navController) }
-        composable("listDetail/{listId}") { }
+        composable("listDetail/{listId}") { backStackEntry ->
+            val listId = backStackEntry.arguments?.getString("listId") ?: return@composable
+            ListDetailScreen(navController = navController, listId = listId)
+        }
         composable("itemForm/{listId}/{itemId}") { }
         composable("productForm/{productId}") { }
         composable("storeForm/{storeId}") { }
