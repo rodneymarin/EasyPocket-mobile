@@ -340,7 +340,7 @@ private fun ActionBar(
             )
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TotalsBlock(total = uiState.visibleTotal, cartTotal = uiState.cartTotal, language = language)
@@ -640,7 +640,7 @@ private fun StorelessTag(text: String, appColors: com.easypocket.mobile.ui.theme
     Box(
         modifier = Modifier
             .background(appColors.surface, RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 2.dp),
+            .padding(horizontal = 10.dp, vertical = 1.dp),
     ) {
         Text(text, color = appColors.textSecondary, fontSize = 11.sp, fontStyle = FontStyle.Italic)
     }

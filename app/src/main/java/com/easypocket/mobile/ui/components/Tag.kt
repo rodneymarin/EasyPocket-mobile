@@ -35,7 +35,7 @@ fun Tag(
         Box(
             modifier = modifier
                 .background(resolvedColor.copy(alpha = bgAlpha), RoundedCornerShape(999.dp))
-                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 2.dp else 4.dp),
+                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 1.dp else 3.dp),
         ) {
             Text(text, color = textColor, fontSize = if (isSmall) 11.sp else 13.sp)
         }
@@ -43,7 +43,7 @@ fun Tag(
         Box(
             modifier = modifier
                 .background(appColors.surface, RoundedCornerShape(999.dp))
-                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 2.dp else 4.dp),
+                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 1.dp else 3.dp),
         ) {
             Text(text, color = appColors.surfaceText, fontSize = if (isSmall) 11.sp else 13.sp)
         }
