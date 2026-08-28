@@ -16,13 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -48,6 +46,7 @@ import com.easypocket.mobile.domain.UnitOfMeasurement
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
@@ -93,9 +92,10 @@ fun ProductFormContent(
             modifier = modifier
                 .fillMaxSize()
                 .background(appColors.background)
+                .padding(top = 60.dp)
                 .imePadding(),
         ) {
-            ProductFormHeader(
+            AppHeader(
                 title = t(if (state.isEdit) "products.editTitle" else "products.addTitle", language),
                 onBack = onCancel,
             )
@@ -190,45 +190,6 @@ private fun ProductFormActions(
             onClick = { scope.launch { vm.save { onSaved() } } },
             modifier = Modifier.fillMaxWidth(),
         )
-    }
-}
-
-@Composable
-private fun ProductFormHeader(title: String, onBack: () -> Unit) {
-    val appColors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 60.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            title,
-            color = appColors.text,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 52.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            maxLines = 2,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 12.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(appColors.surface)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "back",
-                tint = appColors.text,
-                modifier = Modifier.size(20.dp),
-            )
-        }
     }
 }
 

@@ -16,11 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -49,6 +47,7 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
@@ -93,9 +92,10 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
         modifier = Modifier
             .fillMaxSize()
             .background(appColors.background)
+            .padding(top = 60.dp)
             .imePadding(),
     ) {
-        ItemFormHeader(
+        AppHeader(
             title = if (uiState.isEdit) t("listItem.editTitle", language) else t("listItem.addTitle", language),
             onBack = ::goBack,
         )
@@ -298,44 +298,6 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
         },
         onDismiss = { showDeleteConfirm = false },
     )
-}
-
-@Composable
-private fun ItemFormHeader(title: String, onBack: () -> Unit) {
-    val appColors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 60.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            title,
-            color = appColors.text,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 52.dp),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 12.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(appColors.surface)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "back",
-                tint = appColors.text,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
 }
 
 @Composable

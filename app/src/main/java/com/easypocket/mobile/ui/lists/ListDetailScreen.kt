@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -66,6 +65,7 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.DropdownItem
@@ -116,21 +116,35 @@ fun ListDetailScreen(navController: NavController, listId: String) {
             .padding(top = 60.dp),
     ) {
         val currentList = uiState.list
-        DetailHeader(
+        AppHeader(
             title = when {
                 currentList != null -> currentList.title
                 uiState.isLoading -> t("common.loading", language)
                 else -> t("common.error", language)
             },
-            isSelectionMode = uiState.isSelectionMode,
-            selectionCount = uiState.selection.size,
-            onBack = onBack,
-            onTitleClick = {
-                renameInput = uiState.list?.title ?: ""
-                showRename = true
+            onBack = { if (uiState.isSelectionMode) vm.clearSelection() else onBack() },
+            onTitleClick = if (uiState.isSelectionMode) null else {
+                {
+                    renameInput = uiState.list?.title ?: ""
+                    showRename = true
+                }
             },
-            onCloseSelection = { vm.clearSelection() },
-            language = language,
+            titleContent = if (uiState.isSelectionMode) {
+                {
+                    Text(
+                        text = "${uiState.selection.size} ${t("common.selected", language)}",
+                        color = appColors.text,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 52.dp),
+                    )
+                }
+            } else null,
+            leading = if (uiState.isSelectionMode) {
+                {
+                    HeaderCloseButton(onClick = { vm.clearSelection() })
+                }
+            } else null,
         )
 
         when {
@@ -267,61 +281,22 @@ private fun Set<Long>.toggle(id: Long): Set<Long> =
     if (id in this) this - id else this + id
 
 @Composable
-private fun DetailHeader(
-    title: String,
-    isSelectionMode: Boolean,
-    selectionCount: Int,
-    onBack: () -> Unit,
-    onTitleClick: () -> Unit,
-    onCloseSelection: () -> Unit,
-    language: Language,
-) {
+private fun HeaderCloseButton(onClick: () -> Unit) {
     val appColors = LocalAppColors.current
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(appColors.surface)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (isSelectionMode) {
-            Text(
-                text = "$selectionCount ${t("common.selected", language)}",
-                color = appColors.text,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 52.dp),
-            )
-        } else {
-            Text(
-                text = title,
-                color = appColors.text,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .padding(horizontal = 52.dp)
-                    .clickable(onClick = onTitleClick),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 12.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(appColors.surface)
-                .clickable(onClick = { if (isSelectionMode) onCloseSelection() else onBack() }),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                if (isSelectionMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = appColors.text,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        Icon(
+            Icons.Default.Close,
+            contentDescription = null,
+            tint = appColors.text,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

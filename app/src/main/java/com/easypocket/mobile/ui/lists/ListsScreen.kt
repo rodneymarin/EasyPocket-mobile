@@ -50,12 +50,12 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.PressableCard
-import com.easypocket.mobile.ui.components.ScreenHeader
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
@@ -97,7 +97,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
             .background(appColors.background)
             .padding(top = 60.dp),
     ) {
-        ScreenHeader(
+        AppHeader(
             title = t("tab.lists", language),
             onMenuClick = onMenuClick,
         )

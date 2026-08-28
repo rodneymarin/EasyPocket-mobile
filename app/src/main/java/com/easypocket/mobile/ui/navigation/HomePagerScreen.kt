@@ -1,5 +1,6 @@
 package com.easypocket.mobile.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -44,6 +45,7 @@ fun HomePagerScreen(vm: AppViewModel, navController: NavController) {
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             BottomBar(
                 pageCount = PAGE_COUNT,
