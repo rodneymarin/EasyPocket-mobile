@@ -45,7 +45,7 @@ fun Tag(
         Box(
             modifier = modifier
                 .background(appColors.surface, RoundedCornerShape(999.dp))
-                .border(1.dp, Color.Transparent, RoundedCornerShape(999.dp))
+                .border(1.dp, appColors.border, RoundedCornerShape(999.dp))
                 .padding(horizontal = if (isSmall) 8.dp else 12.dp, vertical = if (isSmall) 3.dp else 5.dp),
         ) {
             Text(text, color = appColors.surfaceText, fontSize = if (isSmall) 11.sp else 13.sp)

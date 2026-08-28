@@ -426,26 +426,27 @@ private fun SelectionActionsBar(
     onDelete: () -> Unit,
     language: Language,
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (hasAvailableLists) {
             AppButton(
                 text = t("listDetail.moveSelected", language),
                 onClick = onMove,
-                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
         }
         AppButton(
             text = t(if (allPinned) "listDetail.unpinSelected" else "listDetail.pinSelected", language),
             onClick = onPin,
-            modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
         AppButton(
             text = "${t("listDetail.removeConfirm", language)} ($selectedCount)",
             onClick = onDelete,
             variant = ButtonVariant.DESTRUCTIVE,
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -530,9 +531,11 @@ private fun DoneSectionHeader(language: Language) {
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = t("listDetail.doneSection", language),
-            color = appColors.textSecondary,
+            color = appColors.textSecondary.copy(alpha = 0.8f),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp,
+            modifier = Modifier.padding(horizontal = 21.dp),
         )
         Spacer(Modifier.height(12.dp))
     }

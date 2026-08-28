@@ -2,7 +2,6 @@ package com.easypocket.mobile.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,7 +43,7 @@ fun PressableCard(
             .background(backgroundColor ?: Color.Transparent)
             .combinedClickable(
                 interactionSource = interactionSource,
-                indication = LocalIndication.current,
+                indication = null,
                 enabled = true,
                 onClick = onClick,
                 onLongClick = onLongClick,

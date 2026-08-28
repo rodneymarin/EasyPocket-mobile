@@ -30,8 +30,6 @@ import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
 import com.easypocket.mobile.ui.theme.LocalAppColors
-import com.easypocket.mobile.ui.theme.LocalIsDark
-import com.easypocket.mobile.ui.theme.StoreColors
 
 private val EST_CHAR_WIDTH = 8.5.dp
 private val MORE_TOGGLE_WIDTH = 40.dp
@@ -167,6 +165,24 @@ private fun AllStoresChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    FilterChip(label = label, selected = selected, onClick = onClick)
+}
+
+@Composable
+private fun StoreChip(
+    store: Store,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(label = store.description, selected = selected, onClick = onClick)
+}
+
+@Composable
+private fun FilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     val appColors = LocalAppColors.current
     val bg = if (selected) appColors.primary else Color.Transparent
     val border = if (selected) appColors.primary else appColors.border
@@ -178,34 +194,6 @@ private fun AllStoresChip(
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun StoreChip(
-    store: Store,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val isDark = LocalIsDark.current
-    val background = StoreColors.backgroundAlpha(store.color, isDark)
-    val textColor = StoreColors.textColor(store.color, isDark)
-    val border = if (selected) textColor else Color.Transparent
-    Box(
-        modifier = Modifier
-            .border(1.dp, border, RoundedCornerShape(999.dp))
-            .background(background, RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    ) {
-        Text(
-            store.description,
-            color = textColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Text(label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
