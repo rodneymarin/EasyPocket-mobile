@@ -28,14 +28,14 @@ class ListLogicTest {
     }
 
     @Test
-    fun `totalAmount counts only pending and respects store filter`() {
+    fun `totalAmount counts all items (including done) and respects store filter`() {
         val items = listOf(
             ShoppingListItem(1, "p1", 1.0, "s1", done = false, pinned = false), // 10
             ShoppingListItem(2, "p1", 1.0, "s2", done = true, pinned = false),  // 8.5 done
             ShoppingListItem(3, "p2", 3.0, "s1", done = false, pinned = false), // 6
         )
         val list = ShoppingList("l1", "Lista", items)
-        assertEquals(16.0, ListLogic.totalAmount(list, products, null), 0.001)
+        assertEquals(24.5, ListLogic.totalAmount(list, products, null), 0.001) // 10 + 8.5 + 6
         assertEquals(16.0, ListLogic.totalAmount(list, products, "s1"), 0.001) // ambos pendientes en s1: 10 + 6
         assertEquals(8.5, ListLogic.cartAmount(list, products, null), 0.001)
         assertEquals(0.0, ListLogic.cartAmount(list, products, "s1"), 0.001)    // único done está en s2

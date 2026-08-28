@@ -21,7 +21,7 @@ object ListLogic {
         storeFilter == null || item.storeId == storeFilter
 
     fun totalAmount(list: ShoppingList, productsById: Map<String, Product>, storeFilter: String?): Double =
-        list.items.filter { !it.done && matchesFilter(it, storeFilter) }
+        list.items.filter { matchesFilter(it, storeFilter) }
             .sumOf { itemTotal(it, productsById[it.productId]) }
 
     fun cartAmount(list: ShoppingList, productsById: Map<String, Product>, storeFilter: String?): Double =
