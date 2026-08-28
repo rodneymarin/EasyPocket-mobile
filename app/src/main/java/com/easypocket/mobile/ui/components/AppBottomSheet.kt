@@ -49,7 +49,12 @@ fun AppBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(screenHeightDp * heightFraction)
-                    .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 24.dp),
+                    .padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = if (title != null) 12.dp else 24.dp,
+                        bottom = 24.dp,
+                    ),
             ) {
                 if (title != null) {
                     Box(Modifier.fillMaxWidth()) {
