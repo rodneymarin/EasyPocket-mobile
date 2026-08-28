@@ -496,7 +496,7 @@ private fun ItemsList(
             list.items.isEmpty() -> item {
                 EmptyMessage(t("listDetail.empty", language))
             }
-            uiState.visibleItems.isEmpty() && uiState.pendingItems.isEmpty() && uiState.doneItems.isEmpty() -> item {
+            uiState.pendingItems.isEmpty() && uiState.doneItems.isEmpty() -> item {
                 EmptyMessage(t("listDetail.noFilterMatch", language))
             }
             else -> {

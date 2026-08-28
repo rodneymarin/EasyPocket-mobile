@@ -84,6 +84,36 @@ class ListDetailViewModelTest {
     }
 
     @Test
+    fun `setStoreFilter filters the displayed item list`() = runTest {
+        val vm = createVm()
+        vm.load("0oasidu0as9dua0sd")
+        assertEquals(3, vm.uiState.value.pendingItems.size)
+        assertTrue(vm.uiState.value.doneItems.isEmpty())
+
+        vm.setStoreFilter("store-demo")
+        assertEquals(setOf("prod-001", "prod-002"), vm.uiState.value.pendingItems.map { it.productId }.toSet())
+        assertTrue(vm.uiState.value.doneItems.isEmpty())
+
+        vm.setStoreFilter("store-test")
+        assertEquals(setOf("prod-003"), vm.uiState.value.pendingItems.map { it.productId }.toSet())
+        assertTrue(vm.uiState.value.doneItems.isEmpty())
+
+        vm.setStoreFilter(null)
+        assertEquals(3, vm.uiState.value.pendingItems.size)
+        assertTrue(vm.uiState.value.doneItems.isEmpty())
+    }
+
+    @Test
+    fun `setStoreFilter to a store with no items leaves the filtered list empty`() = runTest {
+        val vm = createVm()
+        vm.load("0oasidu0as9dua0sd")
+        assertTrue(vm.uiState.value.hasItems)
+        vm.setStoreFilter("store-nope")
+        assertTrue(vm.uiState.value.pendingItems.isEmpty())
+        assertTrue(vm.uiState.value.doneItems.isEmpty())
+    }
+
+    @Test
     fun `uncheckAll clears done flags and keeps pending items`() = runTest {
         val vm = createVm()
         val listId = "aosidoaisud0a89sud0a9sdui"

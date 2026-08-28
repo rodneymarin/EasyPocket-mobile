@@ -42,11 +42,14 @@ data class ListDetailUiState(
     val orderedItems: List<ShoppingListItem>
         get() = list?.let { ListLogic.orderedItems(it.items, productsById) } ?: emptyList()
 
+    val filteredItems: List<ShoppingListItem>
+        get() = orderedItems.filter { storeFilter == null || it.storeId == storeFilter }
+
     val pendingItems: List<ShoppingListItem>
-        get() = orderedItems.filter { !it.done }
+        get() = filteredItems.filter { !it.done }
 
     val doneItems: List<ShoppingListItem>
-        get() = orderedItems.filter { it.done }
+        get() = filteredItems.filter { it.done }
 
     val visibleTotal: Double
         get() = list?.let { ListLogic.totalAmount(it, productsById, storeFilter) } ?: 0.0
