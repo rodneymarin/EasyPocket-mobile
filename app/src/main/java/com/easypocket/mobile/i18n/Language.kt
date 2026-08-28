@@ -1,5 +1,7 @@
 package com.easypocket.mobile.i18n
 
+import androidx.compose.runtime.staticCompositionLocalOf
+
 enum class Language(val code: String) {
     ENGLISH("en"),
     SPANISH("es");
@@ -9,3 +11,5 @@ enum class Language(val code: String) {
             entries.firstOrNull { it.code == code } ?: ENGLISH
     }
 }
+
+val LocalLanguage = staticCompositionLocalOf { Language.ENGLISH }
