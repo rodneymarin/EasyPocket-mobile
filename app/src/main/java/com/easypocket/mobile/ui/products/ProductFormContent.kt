@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -15,11 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -65,62 +68,165 @@ fun ProductFormContent(
     val state by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val appColors = LocalAppColors.current
-    val scope = rememberCoroutineScope()
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .imePadding(),
-    ) {
-        ProductNameInput(
-            value = state.name,
-            onValueChange = vm::setName,
-            placeholder = t("products.addModal.namePlaceholder", language),
-            isError = state.nameError,
-            errorMessage = t("toast.productNameExists", language),
-        )
-
-        Spacer(Modifier.height(16.dp))
-        FieldLabel(text = t("products.addModal.unitLabel", language))
-        Spacer(Modifier.height(6.dp))
-        val unitOptions = UnitOfMeasurement.entries.map { SelectOption(it.raw, t("unit.${it.raw}", language)) }
-        SelectField(
-            options = unitOptions,
-            onSelect = { id -> UnitOfMeasurement.fromRaw(id)?.let(vm::setUnit) },
-            selectedId = state.unit.raw,
-            placeholder = t("products.addModal.unitLabel", language),
-        )
-
-        Spacer(Modifier.height(20.dp))
-        PricesSection(state = state, vm = vm, language = language, appColors = appColors)
-
-        Spacer(Modifier.height(24.dp))
-        Column(Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+    if (isSheet) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
+        ) {
+            ProductFormFields(state = state, vm = vm, language = language, appColors = appColors)
+            Spacer(Modifier.height(24.dp))
+            ProductFormActions(
+                state = state,
+                vm = vm,
+                onSaved = onSaved,
+                onDeleted = onDeleted,
+                onCancel = onCancel,
+                language = language,
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(appColors.background)
+                .imePadding(),
+        ) {
+            ProductFormHeader(
+                title = t(if (state.isEdit) "products.editTitle" else "products.addTitle", language),
+                onBack = onCancel,
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
             ) {
-                if (state.isEdit) {
-                    AppButton(
-                        text = t("products.delete", language),
-                        onClick = { scope.launch { vm.delete { onDeleted() } } },
-                        variant = ButtonVariant.DESTRUCTIVE,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                ProductFormFields(state = state, vm = vm, language = language, appColors = appColors)
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                ProductFormActions(
+                    state = state,
+                    vm = vm,
+                    onSaved = onSaved,
+                    onDeleted = onDeleted,
+                    onCancel = onCancel,
+                    language = language,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductFormFields(
+    state: ProductFormUiState,
+    vm: ProductFormViewModel,
+    language: com.easypocket.mobile.i18n.Language,
+    appColors: AppColors,
+) {
+    ProductNameInput(
+        value = state.name,
+        onValueChange = vm::setName,
+        placeholder = t("products.addModal.namePlaceholder", language),
+        isError = state.nameError,
+        errorMessage = t("toast.productNameExists", language),
+    )
+
+    Spacer(Modifier.height(16.dp))
+    FieldLabel(text = t("products.addModal.unitLabel", language))
+    Spacer(Modifier.height(6.dp))
+    val unitOptions = UnitOfMeasurement.entries.map { SelectOption(it.raw, t("unit.${it.raw}", language)) }
+    SelectField(
+        options = unitOptions,
+        onSelect = { id -> UnitOfMeasurement.fromRaw(id)?.let(vm::setUnit) },
+        selectedId = state.unit.raw,
+        placeholder = t("products.addModal.unitLabel", language),
+    )
+
+    Spacer(Modifier.height(20.dp))
+    PricesSection(state = state, vm = vm, language = language, appColors = appColors)
+}
+
+@Composable
+private fun ProductFormActions(
+    state: ProductFormUiState,
+    vm: ProductFormViewModel,
+    onSaved: () -> Unit,
+    onDeleted: () -> Unit,
+    onCancel: () -> Unit,
+    language: com.easypocket.mobile.i18n.Language,
+) {
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (state.isEdit) {
                 AppButton(
-                    text = t("products.addModal.cancel", language),
-                    onClick = onCancel,
-                    variant = ButtonVariant.SECONDARY,
+                    text = t("products.delete", language),
+                    onClick = { scope.launch { vm.delete { onDeleted() } } },
+                    variant = ButtonVariant.DESTRUCTIVE,
                     modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(Modifier.height(8.dp))
             AppButton(
-                text = t("products.addModal.save", language),
-                onClick = { scope.launch { vm.save { onSaved() } } },
-                modifier = Modifier.fillMaxWidth(),
+                text = t("products.addModal.cancel", language),
+                onClick = onCancel,
+                variant = ButtonVariant.SECONDARY,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        AppButton(
+            text = t("products.addModal.save", language),
+            onClick = { scope.launch { vm.save { onSaved() } } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun ProductFormHeader(title: String, onBack: () -> Unit) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 60.dp, bottom = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            title,
+            color = appColors.text,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 52.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 12.dp)
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(appColors.surface)
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "back",
+                tint = appColors.text,
+                modifier = Modifier.size(20.dp),
             )
         }
     }

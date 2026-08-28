@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import com.easypocket.mobile.AppViewModel
 import com.easypocket.mobile.ui.lists.ItemFormScreen
 import com.easypocket.mobile.ui.lists.ListDetailScreen
+import com.easypocket.mobile.ui.products.ProductFormScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
@@ -21,7 +22,10 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
             val itemId = backStackEntry.arguments?.getString("itemId")?.toLongOrNull() ?: return@composable
             ItemFormScreen(navController = navController, listId = listId, itemId = itemId)
         }
-        composable("productForm/{productId}") { }
+        composable("productForm/{productId}") { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
+            ProductFormScreen(navController = navController, productId = productId)
+        }
         composable("storeForm/{storeId}") { }
     }
 }

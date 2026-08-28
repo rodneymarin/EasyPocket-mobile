@@ -191,6 +191,22 @@ class ProductFormViewModelTest {
     }
 
     @Test
+    fun `save update persists renamed name unit and prices`() = runTest {
+        repos()
+        val vm = vm()
+        vm.load("prod-001")
+        vm.setName("Papa Grande")
+        vm.setUnit(UnitOfMeasurement.KG)
+        vm.updatePrice("store-demo", "9.9")
+        vm.save { }
+        val found = productsRepository.getByName("Papa Grande")
+        assertNotNull(found)
+        assertEquals(UnitOfMeasurement.KG, found!!.unitOfMeasurement)
+        assertEquals(2, found.prices.size)
+        assertEquals(9.9, found.prices.first { it.storeId == "store-demo" }.value, 0.001)
+    }
+
+    @Test
     fun `delete removes the product and calls onDeleted`() = runTest {
         repos()
         val vm = vm()
