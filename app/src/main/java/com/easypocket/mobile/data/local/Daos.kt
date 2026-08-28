@@ -82,6 +82,9 @@ interface ShoppingListDao {
     @Update
     suspend fun updateItem(item: ShoppingListItemEntity)
 
+    @Query("UPDATE shopping_list_items SET product_id = :productId, store_id = :storeId, quantity = :quantity, done = :done, pinned = :pinned WHERE id = :id")
+    suspend fun updateItemFields(id: Long, productId: String, storeId: String?, quantity: Double, done: Boolean, pinned: Boolean)
+
     @Query("UPDATE shopping_list_items SET done = :done WHERE id = :id")
     suspend fun toggleItemDone(id: Long, done: Boolean)
 
