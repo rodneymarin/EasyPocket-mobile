@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -68,7 +69,8 @@ fun FormTextField(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 0.dp),
+                .fillMaxHeight(),
+            contentAlignment = Alignment.CenterStart,
         ) {
             if (value.isEmpty()) {
                 Text(placeholder, color = appColors.placeholderText, fontSize = fontSize.sp)
@@ -82,7 +84,6 @@ fun FormTextField(
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
                     .onFocusChanged { isFocused = it.isFocused },
             )
         }

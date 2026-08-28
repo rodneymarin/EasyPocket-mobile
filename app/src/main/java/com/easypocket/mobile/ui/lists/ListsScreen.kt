@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -35,8 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +50,7 @@ import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
+import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.PressableCard
@@ -206,8 +204,7 @@ private fun ListsContent(
     val appColors = LocalAppColors.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
     ) {
         items(uiState.filtered, key = { it.list.id }) { card ->
             ListCard(
@@ -238,11 +235,11 @@ private fun ListCard(
 ) {
     val appColors = LocalAppColors.current
     PressableCard(onClick = onClick) {
-        Column(Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = card.list.title,
                     color = appColors.text,
@@ -250,40 +247,39 @@ private fun ListCard(
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickableNoIndication(onClick = onDelete),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "delete list",
-                        tint = appColors.textSecondary,
-                        modifier = Modifier.size(18.dp),
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Tag(
+                        text = t(
+                            "list.items",
+                            language,
+                            mapOf(
+                                "completed" to card.doneCount.toString(),
+                                "count" to card.itemCount.toString(),
+                            ),
+                        ),
+                        size = TagSize.SM,
+                    )
+                    Tag(
+                        text = t("list.total", language, mapOf("amount" to formatAmount(card.total))),
+                        size = TagSize.SM,
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Tag(
-                    text = t(
-                        "list.items",
-                        language,
-                        mapOf(
-                            "completed" to card.doneCount.toString(),
-                            "count" to card.itemCount.toString(),
-                        ),
-                    ),
-                    size = TagSize.SM,
-                )
-                Tag(
-                    text = t("list.total", language, mapOf("amount" to formatAmount(card.total))),
-                    size = TagSize.SM,
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickableNoIndication(onClick = onDelete),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "delete list",
+                    tint = appColors.textSecondary,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
@@ -296,31 +292,11 @@ private fun ListTitleInput(
     onValueChange: (String) -> Unit,
     placeholder: String,
 ) {
-    val appColors = LocalAppColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            if (value.isEmpty()) {
-                Text(placeholder, color = appColors.placeholderText, fontSize = 14.sp)
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
-                cursorBrush = SolidColor(appColors.primary),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
-        }
-    }
+    FormTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+    )
 }
 
 @Composable

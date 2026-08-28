@@ -1,12 +1,10 @@
 package com.easypocket.mobile.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
@@ -15,12 +13,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.ui.theme.LocalAppColors
@@ -60,7 +58,7 @@ fun AppHeader(
             if (leading != null) {
                 leading()
             } else if (onBack != null) {
-                HeaderCircleButton(
+                HeaderIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "back",
                     onClick = onBack,
@@ -72,12 +70,11 @@ fun AppHeader(
             if (trailing != null) {
                 trailing()
             } else if (onMenuClick != null) {
-                HeaderCircleButton(
+                HeaderIconButton(
                     icon = Icons.Default.Menu,
                     contentDescription = "menu",
                     onClick = onMenuClick,
                     iconSize = 28.dp,
-                    backgroundColor = Color.Transparent,
                 )
             }
         }
@@ -85,19 +82,16 @@ fun AppHeader(
 }
 
 @Composable
-private fun HeaderCircleButton(
+private fun HeaderIconButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
-    backgroundColor: Color = Color.Unspecified,
+    iconSize: Dp = 20.dp,
 ) {
     val appColors = LocalAppColors.current
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(CircleShape)
-            .background(if (backgroundColor == Color.Unspecified) appColors.surface else backgroundColor)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

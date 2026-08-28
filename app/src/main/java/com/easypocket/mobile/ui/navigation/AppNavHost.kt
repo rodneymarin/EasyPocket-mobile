@@ -1,5 +1,7 @@
 package com.easypocket.mobile.ui.navigation
 
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -12,7 +14,14 @@ import com.easypocket.mobile.ui.stores.StoreFormScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(
+        navController = navController,
+        startDestination = "home",
+        enterTransition = { slideInHorizontally { it } },
+        exitTransition = { slideOutHorizontally { -it } },
+        popEnterTransition = { slideInHorizontally { -it } },
+        popExitTransition = { slideOutHorizontally { it } },
+    ) {
         composable("home") { HomePagerScreen(vm = vm, navController = navController) }
         composable("listDetail/{listId}") { backStackEntry ->
             val listId = backStackEntry.arguments?.getString("listId") ?: return@composable

@@ -206,8 +206,7 @@ private fun StoresList(
     val appColors = LocalAppColors.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
     ) {
         items(uiState.filtered, key = { it.id }) { store ->
             StoreCard(

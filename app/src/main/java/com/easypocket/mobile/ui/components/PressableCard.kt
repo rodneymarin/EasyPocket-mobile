@@ -49,7 +49,8 @@ fun PressableCard(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(vertical = 12.dp, horizontal = 21.dp),
+            .padding(vertical = 12.dp, horizontal = 21.dp)
+            .padding(bottom = 4.dp),
     ) {
         Box(Modifier.matchParentSize().background(overlay))
         content()

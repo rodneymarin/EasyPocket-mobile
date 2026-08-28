@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -41,9 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +67,7 @@ import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
+import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.PressableCard
@@ -721,31 +719,11 @@ private fun DetailTitleInput(
     onValueChange: (String) -> Unit,
     placeholder: String,
 ) {
-    val appColors = LocalAppColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            if (value.isEmpty()) {
-                Text(placeholder, color = appColors.placeholderText, fontSize = 14.sp)
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
-                cursorBrush = SolidColor(appColors.primary),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
-        }
-    }
+    FormTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+    )
 }
 
 @Composable
