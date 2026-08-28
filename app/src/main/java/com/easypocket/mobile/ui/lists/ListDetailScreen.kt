@@ -639,8 +639,8 @@ private fun DetailItemRow(
 private fun StorelessTag(text: String, appColors: com.easypocket.mobile.ui.theme.AppColors) {
     Box(
         modifier = Modifier
-            .border(1.dp, appColors.border, RoundedCornerShape(999.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .background(appColors.surface, RoundedCornerShape(999.dp))
+            .padding(horizontal = 10.dp, vertical = 2.dp),
     ) {
         Text(text, color = appColors.textSecondary, fontSize = 11.sp, fontStyle = FontStyle.Italic)
     }

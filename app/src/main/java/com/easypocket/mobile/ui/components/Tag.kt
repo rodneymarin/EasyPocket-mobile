@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,8 +35,7 @@ fun Tag(
         Box(
             modifier = modifier
                 .background(resolvedColor.copy(alpha = bgAlpha), RoundedCornerShape(999.dp))
-                .border(1.dp, resolvedColor.copy(alpha = 0.4f), RoundedCornerShape(999.dp))
-                .padding(horizontal = if (isSmall) 8.dp else 12.dp, vertical = if (isSmall) 3.dp else 5.dp),
+                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 2.dp else 4.dp),
         ) {
             Text(text, color = textColor, fontSize = if (isSmall) 11.sp else 13.sp)
         }
@@ -45,8 +43,7 @@ fun Tag(
         Box(
             modifier = modifier
                 .background(appColors.surface, RoundedCornerShape(999.dp))
-                .border(1.dp, appColors.border, RoundedCornerShape(999.dp))
-                .padding(horizontal = if (isSmall) 8.dp else 12.dp, vertical = if (isSmall) 3.dp else 5.dp),
+                .padding(horizontal = if (isSmall) 10.dp else 14.dp, vertical = if (isSmall) 2.dp else 4.dp),
         ) {
             Text(text, color = appColors.surfaceText, fontSize = if (isSmall) 11.sp else 13.sp)
         }

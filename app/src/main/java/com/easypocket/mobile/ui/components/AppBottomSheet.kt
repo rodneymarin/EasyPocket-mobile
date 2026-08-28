@@ -7,13 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -56,8 +51,8 @@ fun AppBottomSheet(
                     .height(screenHeightDp * heightFraction)
                     .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 24.dp),
             ) {
-                Box(Modifier.fillMaxWidth()) {
-                    if (title != null) {
+                if (title != null) {
+                    Box(Modifier.fillMaxWidth()) {
                         Text(
                             title,
                             color = appColors.text,
@@ -66,19 +61,8 @@ fun AppBottomSheet(
                             modifier = Modifier.align(Alignment.Center),
                         )
                     }
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.align(Alignment.TopEnd).size(28.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "close",
-                            tint = appColors.textSecondary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    Spacer(Modifier.height(12.dp))
                 }
-                Spacer(Modifier.height(12.dp))
                 content()
             }
         }
