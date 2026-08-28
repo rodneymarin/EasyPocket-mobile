@@ -462,8 +462,7 @@ private fun ItemsList(
     val appColors = LocalAppColors.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
     ) {
         when {
             list.items.isEmpty() -> item {
