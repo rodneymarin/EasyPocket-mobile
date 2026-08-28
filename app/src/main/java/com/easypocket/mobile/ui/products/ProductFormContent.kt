@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.products
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,8 +44,11 @@ import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
+import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import com.easypocket.mobile.ui.components.ListItemGroup
+import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.SelectField
 import com.easypocket.mobile.ui.components.SelectOption
 import com.easypocket.mobile.ui.theme.AppColors
@@ -65,6 +67,21 @@ fun ProductFormContent(
     val state by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val appColors = LocalAppColors.current
+    val scope = rememberCoroutineScope()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    ConfirmSheet(
+        visible = showDeleteConfirm,
+        title = t("products.deleteModal.title", language),
+        message = t("products.deleteModal.confirmMessage", language, mapOf("product" to state.name)),
+        warning = t("products.deleteModal.warning", language),
+        confirmLabel = t("products.deleteModal.confirm", language),
+        onConfirm = {
+            showDeleteConfirm = false
+            scope.launch { vm.delete(onDeleted) }
+        },
+        onDismiss = { showDeleteConfirm = false },
+    )
 
     if (isSheet) {
         Column(
@@ -81,6 +98,7 @@ fun ProductFormContent(
                 onSaved = onSaved,
                 onDeleted = onDeleted,
                 onCancel = onCancel,
+                onDeleteRequest = { showDeleteConfirm = true },
                 language = language,
             )
         }
@@ -116,6 +134,7 @@ fun ProductFormContent(
                     onSaved = onSaved,
                     onDeleted = onDeleted,
                     onCancel = onCancel,
+                    onDeleteRequest = { showDeleteConfirm = true },
                     language = language,
                 )
             }
@@ -159,6 +178,7 @@ private fun ProductFormActions(
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onCancel: () -> Unit,
+    onDeleteRequest: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
 ) {
     val scope = rememberCoroutineScope()
@@ -170,7 +190,7 @@ private fun ProductFormActions(
             if (state.isEdit) {
                 AppButton(
                     text = t("products.delete", language),
-                    onClick = { scope.launch { vm.delete { onDeleted() } } },
+                    onClick = onDeleteRequest,
                     variant = ButtonVariant.DESTRUCTIVE,
                     modifier = Modifier.weight(1f),
                 )
@@ -247,32 +267,41 @@ private fun PricesSection(
         newPriceText = ""
     }
 
-    state.prices.forEach { row ->
-        if (editingStoreId == row.storeId) {
-            PriceEditForm(
-                storeName = row.storeName,
-                priceText = newPriceText,
-                onPriceTextChange = { if (it.matches(PRICE_REGEX)) newPriceText = it },
-                onConfirm = {
-                    vm.updatePrice(row.storeId, newPriceText)
-                    resetForm()
-                },
-                onCancel = ::resetForm,
-            )
-            Spacer(Modifier.height(8.dp))
-        } else {
-            PriceRow(
-                storeName = row.storeName,
-                value = row.value,
-                onEdit = {
-                    editingStoreId = row.storeId
-                    newStoreId = row.storeId
-                    newPriceText = row.value
-                    isAddingPrice = false
-                },
-                onRemove = { vm.removePrice(row.storeId) },
-            )
-            Spacer(Modifier.height(8.dp))
+    if (state.prices.isNotEmpty()) {
+        ListItemGroup(modifier = Modifier.padding(top = 4.dp)) {
+            val firstRowIndex = state.prices.indexOfFirst { it.storeId != editingStoreId }
+            val lastRowIndex = state.prices.indexOfLast { it.storeId != editingStoreId }
+            state.prices.forEachIndexed { index, row ->
+                if (editingStoreId == row.storeId) {
+                    PriceEditForm(
+                        storeName = row.storeName,
+                        priceText = newPriceText,
+                        onPriceTextChange = { if (it.matches(PRICE_REGEX)) newPriceText = it },
+                        onConfirm = {
+                            vm.updatePrice(row.storeId, newPriceText)
+                            resetForm()
+                        },
+                        onCancel = ::resetForm,
+                    )
+                } else {
+                    ListItemRow(
+                        onClick = {
+                            editingStoreId = row.storeId
+                            newStoreId = row.storeId
+                            newPriceText = row.value
+                            isAddingPrice = false
+                        },
+                        isFirst = index == firstRowIndex,
+                        isLast = index == lastRowIndex,
+                    ) {
+                        PriceCardContent(
+                            storeName = row.storeName,
+                            value = row.value,
+                            onRemove = { vm.removePrice(row.storeId) },
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -290,7 +319,6 @@ private fun PricesSection(
             onCancel = ::resetForm,
             language = language,
         )
-        Spacer(Modifier.height(8.dp))
     }
 
     val allStoresUsed = state.availableStores.isEmpty() && state.prices.isNotEmpty()
@@ -329,28 +357,23 @@ private fun PricesSection(
 private val PRICE_REGEX = Regex("^\\d*\\.?\\d*$")
 
 @Composable
-private fun PriceRow(
+private fun PriceCardContent(
     storeName: String,
     value: String,
-    onEdit: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(appColors.surface)
-            .border(1.dp, appColors.border, RoundedCornerShape(10.dp))
-            .clickable(onClick = onEdit)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             storeName,
             color = appColors.text,
-            fontSize = 15.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Text(
@@ -386,7 +409,6 @@ private fun PriceEditForm(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(appColors.surface)
-            .border(1.dp, appColors.border, RoundedCornerShape(10.dp))
             .padding(12.dp),
     ) {
         Text(storeName, color = appColors.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
@@ -431,7 +453,6 @@ private fun AddPriceForm(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(appColors.surface)
-            .border(1.dp, appColors.border, RoundedCornerShape(10.dp))
             .padding(12.dp),
     ) {
         val options = availableStores.map { SelectOption(it.id, it.description) }

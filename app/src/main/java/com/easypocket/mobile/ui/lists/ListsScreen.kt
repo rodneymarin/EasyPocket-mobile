@@ -1,12 +1,10 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -47,13 +44,13 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
-import com.easypocket.mobile.ui.components.ButtonVariant
+import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
-import com.easypocket.mobile.ui.components.IconButtonCircle
+import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
-import com.easypocket.mobile.ui.components.PressableCard
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
@@ -111,15 +108,6 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                 placeholder = t("search.lists", language),
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(10.dp))
-            IconButtonCircle(
-                icon = Icons.Filled.Add,
-                onClick = {
-                    newTitle = ""
-                    showCreateSheet = true
-                },
-                variant = ButtonVariant.PRIMARY,
-            )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -134,6 +122,14 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                     text = if (uiState.lists.isEmpty()) t("lists.empty", language) else t("common.noResults", language),
                 )
             }
+            AppFab(
+                icon = Icons.Filled.Add,
+                onClick = {
+                    newTitle = ""
+                    showCreateSheet = true
+                },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
         }
     }
 
@@ -201,87 +197,78 @@ private fun ListsContent(
     onCardClick: (String) -> Unit,
     onDelete: (ListCardData) -> Unit,
 ) {
-    val appColors = LocalAppColors.current
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+    AppItemList(
+        footerText = t("lists.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
     ) {
-        items(uiState.filtered, key = { it.list.id }) { card ->
-            ListCard(
-                card = card,
-                language = language,
+        itemsIndexed(uiState.filtered, key = { _, card -> card.list.id }) { index, card ->
+            ListItemRow(
                 onClick = { onCardClick(card.list.id) },
-                onDelete = { onDelete(card) },
-            )
-        }
-        item {
-            Text(
-                text = t("lists.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
-                color = appColors.textSecondary,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
+                isFirst = index == 0,
+                isLast = index == uiState.filtered.lastIndex,
+            ) {
+                ListCardContent(
+                    card = card,
+                    language = language,
+                    onDelete = { onDelete(card) },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ListCard(
+private fun ListCardContent(
     card: ListCardData,
     language: Language,
-    onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
-    PressableCard(onClick = onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = card.list.title,
-                    color = appColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Tag(
-                        text = t(
-                            "list.items",
-                            language,
-                            mapOf(
-                                "completed" to card.doneCount.toString(),
-                                "count" to card.itemCount.toString(),
-                            ),
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = card.list.title,
+                color = appColors.text,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Tag(
+                    text = t(
+                        "list.items",
+                        language,
+                        mapOf(
+                            "completed" to card.doneCount.toString(),
+                            "count" to card.itemCount.toString(),
                         ),
-                        size = TagSize.SM,
-                    )
-                    Tag(
-                        text = t("list.total", language, mapOf("amount" to formatAmount(card.total))),
-                        size = TagSize.SM,
-                    )
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickableNoIndication(onClick = onDelete),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "delete list",
-                    tint = appColors.textSecondary,
-                    modifier = Modifier.size(18.dp),
+                    ),
+                    size = TagSize.SM,
+                )
+                Tag(
+                    text = t("list.total", language, mapOf("amount" to formatAmount(card.total))),
+                    size = TagSize.SM,
                 )
             }
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickableNoIndication(onClick = onDelete),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "delete list",
+                tint = appColors.textSecondary,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

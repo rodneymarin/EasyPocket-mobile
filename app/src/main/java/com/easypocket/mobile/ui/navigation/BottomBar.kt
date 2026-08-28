@@ -47,7 +47,7 @@ fun BottomBar(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    Surface(color = appColors.surface, modifier = modifier.fillMaxWidth()) {
+    Surface(color = appColors.background, modifier = modifier.fillMaxWidth()) {
         Column(Modifier.navigationBarsPadding()) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(appColors.border))
             Row(Modifier.fillMaxWidth()) {

@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -52,18 +51,9 @@ fun FormTextField(
         modifier = modifier
             .fillMaxWidth()
             .height(45.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(
-                if (isFocused) 2.dp else 1.dp,
-                when {
-                    isFocused -> appColors.primary
-                    isError -> appColors.destructiveBorder
-                    else -> appColors.border
-                },
-                RoundedCornerShape(8.dp),
-            )
-            .padding(horizontal = 11.dp),
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (isError) appColors.destructive else appColors.inputBackground)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

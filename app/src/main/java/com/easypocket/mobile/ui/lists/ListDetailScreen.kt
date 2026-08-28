@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,6 +60,7 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
@@ -69,8 +68,9 @@ import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
-import com.easypocket.mobile.ui.components.PressableCard
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
@@ -171,7 +171,6 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         }
                     },
                     onRemoveCompleted = { showRemoveCompleted = true },
-                    onAdd = { navController.navigate("itemForm/$listId/-1") },
                     onSelectStore = { vm.setStoreFilter(it) },
                     onCloseSelection = { vm.clearSelection() },
                     onMove = {
@@ -206,6 +205,13 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                             scope.launch { vm.toggleDone(item) }
                         },
                     )
+                    if (!uiState.isSelectionMode) {
+                        AppFab(
+                            icon = Icons.Default.Add,
+                            onClick = { navController.navigate("itemForm/$listId/-1") },
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 36.dp),
+                        )
+                    }
                 }
             }
         }
@@ -309,7 +315,6 @@ private fun ActionBar(
     onCopy: () -> Unit,
     onUncheckAll: () -> Unit,
     onRemoveCompleted: () -> Unit,
-    onAdd: () -> Unit,
     onSelectStore: (String?) -> Unit,
     onCloseSelection: () -> Unit,
     onMove: () -> Unit,
@@ -345,12 +350,6 @@ private fun ActionBar(
         ) {
             TotalsBlock(total = uiState.visibleTotal, cartTotal = uiState.cartTotal, language = language)
             Spacer(Modifier.weight(1f))
-            IconButtonCircle(
-                icon = Icons.Default.Add,
-                onClick = onAdd,
-                variant = ButtonVariant.PRIMARY,
-            )
-            Spacer(Modifier.width(8.dp))
             Box {
                 IconButtonCircle(
                     icon = Icons.Default.MoreVert,
@@ -461,10 +460,17 @@ private fun ItemsList(
     onToggleDone: (ShoppingListItem) -> Unit,
 ) {
     val appColors = LocalAppColors.current
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+    AppItemList(
+        footerText = t(
+            "list.items",
+            language,
+            mapOf(
+                "completed" to uiState.doneItems.size.toString(),
+                "count" to uiState.visibleItems.size.toString(),
+            ),
+        ),
     ) {
+        val hasDone = uiState.doneItems.isNotEmpty()
         when {
             list.items.isEmpty() -> item {
                 EmptyMessage(t("listDetail.empty", language))
@@ -473,52 +479,48 @@ private fun ItemsList(
                 EmptyMessage(t("listDetail.noFilterMatch", language))
             }
             else -> {
-                items(uiState.pendingItems, key = { it.id }) { item ->
-                    DetailItemRow(
-                        item = item,
-                        productsById = uiState.productsById,
-                        stores = uiState.stores,
-                        isSelectionMode = uiState.isSelectionMode,
-                        isSelected = item.id in uiState.selection,
-                        language = language,
-                        onPress = { onItemPress(item) },
-                        onLongPress = { onItemLongPress(item) },
-                        onToggleDone = { onToggleDone(item) },
-                    )
-                }
-                if (uiState.doneItems.isNotEmpty()) {
-                    item(key = "done-section") {
-                        DoneSectionHeader(language = language)
-                    }
-                    items(uiState.doneItems, key = { it.id }) { item ->
-                        DetailItemRow(
+                itemsIndexed(uiState.pendingItems, key = { _, item -> item.id }) { index, item ->
+                    ListItemRow(
+                        onClick = { onItemPress(item) },
+                        onLongClick = { onItemLongPress(item) },
+                        isFirst = index == 0,
+                        isLast = index == uiState.pendingItems.lastIndex,
+                        backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                    ) {
+                        DetailItemCardContent(
                             item = item,
                             productsById = uiState.productsById,
                             stores = uiState.stores,
                             isSelectionMode = uiState.isSelectionMode,
                             isSelected = item.id in uiState.selection,
                             language = language,
-                            onPress = { onItemPress(item) },
-                            onLongPress = { onItemLongPress(item) },
                             onToggleDone = { onToggleDone(item) },
                         )
                     }
                 }
-                item(key = "count-label") {
-                    Text(
-                        text = t(
-                            "list.items",
-                            language,
-                            mapOf(
-                                "completed" to uiState.doneItems.size.toString(),
-                                "count" to uiState.visibleItems.size.toString(),
-                            ),
-                        ),
-                        color = appColors.textSecondary,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    )
+                if (hasDone) {
+                    item(key = "done-section") {
+                        DoneSectionHeader(language = language)
+                    }
+                    itemsIndexed(uiState.doneItems, key = { _, item -> item.id }) { index, item ->
+                        ListItemRow(
+                            onClick = { onItemPress(item) },
+                            onLongClick = { onItemLongPress(item) },
+                            isFirst = index == 0,
+                            isLast = index == uiState.doneItems.lastIndex,
+                            backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                        ) {
+                            DetailItemCardContent(
+                                item = item,
+                                productsById = uiState.productsById,
+                                stores = uiState.stores,
+                                isSelectionMode = uiState.isSelectionMode,
+                                isSelected = item.id in uiState.selection,
+                                language = language,
+                                onToggleDone = { onToggleDone(item) },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -529,15 +531,16 @@ private fun ItemsList(
 private fun DoneSectionHeader(language: Language) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(8.dp))
         Text(
             text = t("listDetail.doneSection", language),
             color = appColors.textSecondary.copy(alpha = 0.8f),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.sp,
-            modifier = Modifier.padding(horizontal = 21.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -550,15 +553,13 @@ private fun EmptyMessage(text: String) {
 }
 
 @Composable
-private fun DetailItemRow(
+private fun DetailItemCardContent(
     item: ShoppingListItem,
     productsById: Map<String, Product>,
     stores: List<Store>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     language: Language,
-    onPress: () -> Unit,
-    onLongPress: () -> Unit,
     onToggleDone: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -572,12 +573,7 @@ private fun DetailItemRow(
     val price = item.storeId?.let { sid -> product?.prices?.firstOrNull { it.storeId == sid }?.value } ?: 0.0
     val showPin = !item.done && item.pinned
 
-    PressableCard(
-        onClick = onPress,
-        onLongClick = onLongPress,
-        backgroundColor = if (isSelected) appColors.surface else null,
-    ) {
-        Box(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth()) {
             if (showPin) {
                 Icon(
                     Icons.Default.PushPin,
@@ -631,7 +627,6 @@ private fun DetailItemRow(
                     CheckCircle(done = item.done, onToggle = onToggleDone, textColor = appColors.primary)
                 }
             }
-        }
     }
 }
 

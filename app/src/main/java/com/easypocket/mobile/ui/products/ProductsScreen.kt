@@ -2,10 +2,8 @@ package com.easypocket.mobile.ui.products
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -48,12 +44,15 @@ import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
-import com.easypocket.mobile.ui.components.PressableCard
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
@@ -115,12 +114,6 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                     placeholder = t("search.products", language),
                     modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(10.dp))
-                IconButtonCircle(
-                    icon = Icons.Filled.Add,
-                    onClick = { navController.navigate("productForm/new") },
-                    variant = ButtonVariant.PRIMARY,
-                )
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -139,6 +132,13 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                 )
                 else -> EmptyState(
                     text = if (uiState.products.isEmpty()) t("products.empty", language) else t("common.noResults", language),
+                )
+            }
+            if (!isSelectionMode) {
+                AppFab(
+                    icon = Icons.Filled.Add,
+                    onClick = { navController.navigate("productForm/new") },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
             }
         }
@@ -204,70 +204,57 @@ private fun ProductsList(
     onProductPress: (String) -> Unit,
     onProductLongPress: (String) -> Unit,
 ) {
-    val appColors = LocalAppColors.current
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+    AppItemList(
+        footerText = t("products.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
     ) {
-        items(uiState.filtered, key = { it.id }) { product ->
-            ProductCard(
-                product = product,
-                isSelectionMode = uiState.isSelectionMode,
-                isSelected = product.id in uiState.selection,
-                language = language,
+        itemsIndexed(uiState.filtered, key = { _, product -> product.id }) { index, product ->
+            ListItemRow(
                 onClick = { onProductPress(product.id) },
                 onLongClick = { onProductLongPress(product.id) },
-            )
-        }
-        item {
-            Text(
-                text = t("products.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
-                color = appColors.textSecondary,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
+                isFirst = index == 0,
+                isLast = index == uiState.filtered.lastIndex,
+            ) {
+                ProductCardContent(
+                    product = product,
+                    isSelectionMode = uiState.isSelectionMode,
+                    isSelected = product.id in uiState.selection,
+                    language = language,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ProductCard(
+private fun ProductCardContent(
     product: Product,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     language: Language,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
-    PressableCard(
-        onClick = onClick,
-        onLongClick = onLongClick,
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (isSelectionMode) {
-                SelectionCircle(isSelected = isSelected, appColors = appColors)
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                text = product.productName,
-                color = appColors.text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+        if (isSelectionMode) {
+            SelectionCircle(isSelected = isSelected, appColors = appColors)
             Spacer(Modifier.width(8.dp))
-            Tag(
-                text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
-                size = TagSize.SM,
-            )
         }
+        Text(
+            text = product.productName,
+            color = appColors.text,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(8.dp))
+        Tag(
+            text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
+            size = TagSize.SM,
+        )
     }
 }
 

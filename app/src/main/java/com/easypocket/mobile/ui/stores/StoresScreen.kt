@@ -2,10 +2,8 @@ package com.easypocket.mobile.ui.stores
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -47,12 +43,15 @@ import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
-import com.easypocket.mobile.ui.components.PressableCard
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.ToastType
 import com.easypocket.mobile.ui.theme.LocalAppColors
@@ -114,12 +113,6 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
                     placeholder = t("search.stores", language),
                     modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(10.dp))
-                IconButtonCircle(
-                    icon = Icons.Filled.Add,
-                    onClick = { navController.navigate("storeForm/new") },
-                    variant = ButtonVariant.PRIMARY,
-                )
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -138,6 +131,13 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
                 )
                 else -> EmptyState(
                     text = if (uiState.stores.isEmpty()) t("stores.empty", language) else t("common.noResults", language),
+                )
+            }
+            if (!isSelectionMode) {
+                AppFab(
+                    icon = Icons.Filled.Add,
+                    onClick = { navController.navigate("storeForm/new") },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
             }
         }
@@ -203,71 +203,58 @@ private fun StoresList(
     onStorePress: (String) -> Unit,
     onStoreLongPress: (String) -> Unit,
 ) {
-    val appColors = LocalAppColors.current
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+    AppItemList(
+        footerText = t("stores.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
     ) {
-        items(uiState.filtered, key = { it.id }) { store ->
-            StoreCard(
-                store = store,
-                isSelectionMode = uiState.isSelectionMode,
-                isSelected = store.id in uiState.selection,
+        itemsIndexed(uiState.filtered, key = { _, store -> store.id }) { index, store ->
+            ListItemRow(
                 onClick = { onStorePress(store.id) },
                 onLongClick = { onStoreLongPress(store.id) },
-            )
-        }
-        item {
-            Text(
-                text = t("stores.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
-                color = appColors.textSecondary,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            )
+                isFirst = index == 0,
+                isLast = index == uiState.filtered.lastIndex,
+            ) {
+                StoreCardContent(
+                    store = store,
+                    isSelectionMode = uiState.isSelectionMode,
+                    isSelected = store.id in uiState.selection,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StoreCard(
+private fun StoreCardContent(
     store: Store,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
     val isDark = LocalIsDark.current
-    PressableCard(
-        onClick = onClick,
-        onLongClick = onLongClick,
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (isSelectionMode) {
-                SelectionCircle(isSelected = isSelected, appColors = appColors)
-                Spacer(Modifier.width(8.dp))
-            }
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(StoreColors.get(store.color, isDark)),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = store.description,
-                color = appColors.text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+        if (isSelectionMode) {
+            SelectionCircle(isSelected = isSelected, appColors = appColors)
+            Spacer(Modifier.width(8.dp))
         }
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(StoreColors.get(store.color, isDark)),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = store.description,
+            color = appColors.text,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

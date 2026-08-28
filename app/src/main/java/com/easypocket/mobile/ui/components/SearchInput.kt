@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -14,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,14 +49,9 @@ fun SearchInput(
         modifier = modifier
             .fillMaxWidth()
             .height(45.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(appColors.background)
-            .border(
-                2.dp,
-                if (isFocused) appColors.primary else appColors.border,
-                RoundedCornerShape(8.dp),
-            )
-            .padding(horizontal = 11.dp),
+            .clip(RoundedCornerShape(999.dp))
+            .background(appColors.inputBackground)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -92,6 +87,13 @@ fun SearchInput(
                 modifier = Modifier
                     .size(18.dp)
                     .clickableNoIndication { onValueChange("") },
+            )
+        } else {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = "search",
+                tint = appColors.textSecondary,
+                modifier = Modifier.size(18.dp),
             )
         }
     }

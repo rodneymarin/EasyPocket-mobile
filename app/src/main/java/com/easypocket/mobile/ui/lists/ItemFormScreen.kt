@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -113,12 +112,11 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(appColors.background)
-                        .border(1.dp, appColors.border, RoundedCornerShape(8.dp))
+                        .height(45.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(appColors.inputBackground)
                         .clickable { showPicker = true }
-                        .padding(horizontal = 10.dp),
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
