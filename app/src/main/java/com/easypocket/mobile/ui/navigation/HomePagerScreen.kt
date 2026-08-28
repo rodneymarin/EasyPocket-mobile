@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import com.easypocket.mobile.AppViewModel
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.ScreenHeader
+import com.easypocket.mobile.ui.lists.ListsScreen
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.launch
 
@@ -66,18 +67,25 @@ fun HomePagerScreen(vm: AppViewModel, navController: NavController) {
             state = pagerState,
             modifier = Modifier.fillMaxSize().padding(paddingValues),
         ) { page ->
-            Column(Modifier.fillMaxSize()) {
-                ScreenHeader(
-                    title = labels[page],
+            if (page == 0) {
+                ListsScreen(
+                    navController = navController,
                     onMenuClick = { vm.openMenu() },
                 )
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Text(
-                        labels[page],
-                        color = appColors.text,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    ScreenHeader(
+                        title = labels[page],
+                        onMenuClick = { vm.openMenu() },
                     )
+                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        Text(
+                            labels[page],
+                            color = appColors.text,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }
