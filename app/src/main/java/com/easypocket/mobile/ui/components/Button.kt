@@ -112,6 +112,7 @@ fun IconButtonCircle(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     variant: ButtonVariant = ButtonVariant.SECONDARY,
+    enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -144,7 +145,8 @@ fun IconButtonCircle(
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(interactionSource = interactionSource, indication = LocalIndication.current, onClick = onClick),
+            .clickable(interactionSource = interactionSource, indication = LocalIndication.current, enabled = enabled, onClick = onClick)
+            .alpha(if (enabled) 1f else 0.35f),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
