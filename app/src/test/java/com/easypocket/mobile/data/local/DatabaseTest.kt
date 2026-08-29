@@ -178,6 +178,10 @@ class DatabaseTest {
 
         db.openHelper.writableDatabase.execSQL("DELETE FROM purchase_history WHERE id = 'h1'")
 
+        db.openHelper.writableDatabase.query("SELECT COUNT(*) FROM purchase_history_items").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
         assertTrue(db.purchaseHistoryDao().observeAll().first().isEmpty())
     }
 }

@@ -81,15 +81,26 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
             }
             else -> {
                 RangeChips(selected = uiState.rangeDays, onSelect = { vm.setRange(it) })
-                HistoryAreaChart(
-                    points = uiState.chartPoints,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-                RecordsList(
-                    records = uiState.filteredRecords,
-                    language = language,
-                    onRecordPress = { selectedRecord = it },
-                )
+                if (uiState.filteredRecords.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            t("history.empty", language),
+                            color = appColors.textSecondary,
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    HistoryAreaChart(
+                        points = uiState.chartPoints,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                    RecordsList(
+                        records = uiState.filteredRecords,
+                        language = language,
+                        onRecordPress = { selectedRecord = it },
+                    )
+                }
             }
         }
     }
