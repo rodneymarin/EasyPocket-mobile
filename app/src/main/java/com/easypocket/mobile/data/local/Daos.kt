@@ -70,8 +70,8 @@ interface ShoppingListDao {
     @Insert
     suspend fun insert(list: ShoppingListEntity)
 
-    @Query("UPDATE shopping_lists SET title = :title WHERE id = :id")
-    suspend fun updateTitle(id: String, title: String)
+    @Query("UPDATE shopping_lists SET title = :title, icon = :icon WHERE id = :id")
+    suspend fun updateTitleAndIcon(id: String, title: String, icon: String)
 
     @Query("DELETE FROM shopping_lists WHERE id = :id")
     suspend fun deleteById(id: String)

@@ -40,6 +40,7 @@ data class PriceEntity(
 data class ShoppingListEntity(
     @PrimaryKey val id: String,
     val title: String,
+    @ColumnInfo(name = "icon", defaultValue = "$") val icon: String = "$",
 )
 
 @Entity(

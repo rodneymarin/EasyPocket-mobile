@@ -114,11 +114,11 @@ class ListDetailViewModel @Inject constructor(
         }
     }
 
-    suspend fun renameList(title: String) {
+    suspend fun renameList(title: String, icon: String) {
         val listId = _uiState.value.list?.id ?: return
-        listsRepository.updateTitle(listId, title)
+        listsRepository.rename(listId, title, icon)
         val current = _uiState.value.list ?: return
-        _uiState.value = _uiState.value.copy(list = current.copy(title = title))
+        _uiState.value = _uiState.value.copy(list = current.copy(title = title, icon = icon))
     }
 
     suspend fun uncheckAll() {

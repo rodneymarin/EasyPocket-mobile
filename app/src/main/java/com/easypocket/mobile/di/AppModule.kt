@@ -23,6 +23,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): EasyPocketDatabase =
         Room.databaseBuilder(context, EasyPocketDatabase::class.java, "easypocket.db")
+            .addMigrations(EasyPocketDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
 

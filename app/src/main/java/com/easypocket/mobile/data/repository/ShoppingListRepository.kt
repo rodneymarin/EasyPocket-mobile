@@ -4,6 +4,7 @@ import com.easypocket.mobile.data.local.ShoppingListDao
 import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.data.local.ShoppingListWithItems
+import com.easypocket.mobile.domain.ListIcon
 import com.easypocket.mobile.domain.ShoppingList
 import com.easypocket.mobile.domain.ShoppingListItem
 import java.util.UUID
@@ -18,6 +19,7 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
         ShoppingList(
             relation.list.id,
             relation.list.title,
+            relation.list.icon,
             relation.items.map { ShoppingListItem(it.id, it.productId, it.quantity, it.storeId, it.done, it.pinned) },
         )
 
@@ -25,15 +27,16 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
 
     suspend fun getById(id: String): ShoppingList? = listDao.getById(id)?.let(::withItems)
 
-    suspend fun create(title: String): ShoppingList {
-        val list = ShoppingList(UUID.randomUUID().toString(), title)
-        listDao.insert(ShoppingListEntity(list.id, list.title))
+    suspend fun create(title: String, icon: String = ListIcon.DEFAULT): ShoppingList {
+        val list = ShoppingList(UUID.randomUUID().toString(), title, icon.ifBlank { ListIcon.DEFAULT })
+        listDao.insert(ShoppingListEntity(list.id, list.title, list.icon))
         return list
     }
 
     suspend fun delete(id: String) = listDao.deleteById(id)
 
-    suspend fun updateTitle(id: String, title: String) = listDao.updateTitle(id, title)
+    suspend fun rename(id: String, title: String, icon: String) =
+        listDao.updateTitleAndIcon(id, title, icon)
 
     suspend fun addItem(listId: String, productId: String, storeId: String?, quantity: Double): Long =
         listDao.insertItem(

@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.easypocket.mobile.domain.ListIcon
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.ShoppingList
@@ -67,6 +68,7 @@ import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
 import com.easypocket.mobile.ui.components.FormTextField
+import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ListItemRow
@@ -93,6 +95,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var showMenu by remember { mutableStateOf(false) }
     var showRename by rememberSaveable { mutableStateOf(false) }
     var renameInput by remember { mutableStateOf("") }
+    var renameIcon by remember { mutableStateOf("") }
     var showRemoveCompleted by rememberSaveable { mutableStateOf(false) }
     var showDeleteSelected by rememberSaveable { mutableStateOf(false) }
     var showMove by rememberSaveable { mutableStateOf(false) }
@@ -124,6 +127,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
             onTitleClick = if (uiState.isSelectionMode) null else {
                 {
                     renameInput = uiState.list?.title ?: ""
+                    renameIcon = uiState.list?.icon ?: ""
                     showRename = true
                 }
             },
@@ -220,14 +224,17 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     RenameSheet(
         visible = showRename,
         initialTitle = uiState.list?.title ?: "",
+        initialIcon = uiState.list?.icon ?: "",
         input = renameInput,
         onInputChange = { renameInput = it },
+        icon = renameIcon,
+        onIconChange = { renameIcon = it },
         language = language,
         onSave = {
             scope.launch {
                 val title = renameInput.trim()
                 if (title.isNotEmpty()) {
-                    vm.renameList(title)
+                    vm.renameList(title, renameIcon.ifBlank { ListIcon.DEFAULT })
                     showRename = false
                     toast.show(t("toast.listRenamed", language), ToastType.SUCCESS)
                 }
@@ -680,14 +687,20 @@ private fun SelectionCircle(selected: Boolean) {
 private fun RenameSheet(
     visible: Boolean,
     initialTitle: String,
+    initialIcon: String,
     input: String,
     onInputChange: (String) -> Unit,
+    icon: String,
+    onIconChange: (String) -> Unit,
     language: Language,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    LaunchedEffect(visible, initialTitle) {
-        if (visible) onInputChange(initialTitle)
+    LaunchedEffect(visible, initialTitle, initialIcon) {
+        if (visible) {
+            onInputChange(initialTitle)
+            onIconChange(initialIcon)
+        }
     }
     AppBottomSheet(
         visible = visible,
@@ -695,6 +708,12 @@ private fun RenameSheet(
         heightFraction = 0.75f,
         title = t("listForm.editTitle", language),
     ) {
+        ListIconField(
+            value = icon,
+            onValueChange = onIconChange,
+            placeholder = t("listForm.icon", language),
+        )
+        Spacer(Modifier.height(16.dp))
         DetailTitleInput(
             value = input,
             onValueChange = onInputChange,

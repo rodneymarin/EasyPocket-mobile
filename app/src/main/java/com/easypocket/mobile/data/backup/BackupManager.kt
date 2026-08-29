@@ -35,7 +35,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             stores = stores.map { BackupStore(it.id, it.description, it.color) },
             products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement) },
             prices = prices.map { BackupPrice(it.productId, it.storeId, it.value) },
-            shoppingLists = lists.map { BackupList(it.list.id, it.list.title) },
+            shoppingLists = lists.map { BackupList(it.list.id, it.list.title, it.list.icon) },
             listItems = lists.flatMap { it.items.map { i ->
                 BackupListItem(i.id, i.shoppingListId, i.productId, i.storeId, i.quantity, i.done, i.pinned)
             } },
@@ -75,7 +75,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             if (backup.prices.isNotEmpty()) {
                 db.priceDao().insertAll(backup.prices.map { PriceEntity(it.productId, it.storeId, it.value) })
             }
-            backup.shoppingLists.forEach { db.listDao().insert(ShoppingListEntity(it.id, it.title)) }
+            backup.shoppingLists.forEach { db.listDao().insert(ShoppingListEntity(it.id, it.title, it.icon)) }
             backup.listItems.forEach { item ->
                 db.listDao().insertItem(
                     ShoppingListItemEntity(

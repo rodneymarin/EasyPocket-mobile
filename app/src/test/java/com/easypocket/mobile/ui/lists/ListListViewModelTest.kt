@@ -68,7 +68,7 @@ class ListListViewModelTest {
     fun `createList returns new id and refreshes`() = runTest {
         val vm = createVm()
         vm.refresh()
-        val id = vm.createList("Nueva")
+        val id = vm.createList("Nueva", "🛒")
         assertNotNull(id)
         assertTrue(vm.uiState.value.lists.any { it.list.id == id })
     }
@@ -77,7 +77,7 @@ class ListListViewModelTest {
     fun `deleteList removes it`() = runTest {
         val vm = createVm()
         vm.refresh()
-        val id = vm.createList("Nueva")
+        val id = vm.createList("Nueva", "🛒")
         assertNotNull(id)
         assertTrue(vm.uiState.value.lists.any { it.list.id == id })
         vm.deleteList(id!!)

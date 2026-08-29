@@ -63,9 +63,9 @@ class ListListViewModel @Inject constructor(
         )
     }
 
-    suspend fun createList(title: String): String? {
+    suspend fun createList(title: String, icon: String): String? {
         if (title.isBlank()) return null
-        val list = listsRepository.create(title.trim())
+        val list = listsRepository.create(title.trim(), icon)
         refresh()
         return list.id
     }

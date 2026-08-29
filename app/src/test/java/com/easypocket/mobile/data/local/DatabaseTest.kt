@@ -2,6 +2,9 @@ package com.easypocket.mobile.data.local
 
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -28,6 +31,33 @@ class DatabaseTest {
 
     @After
     fun tearDown() { db.close() }
+
+    @Test
+    fun `migration 1 to 2 adds icon with default dollar for existing lists`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(1) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE shopping_lists (id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL)")
+                        db.execSQL("INSERT INTO shopping_lists (id, title) VALUES ('l1', 'Compras')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_1_2.migrate(db)
+
+        db.query("SELECT icon FROM shopping_lists WHERE id = 'l1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("$", cursor.getString(0))
+        }
+        helper.close()
+    }
 
     @Test
     fun `delete store cascades prices and nulls item storeId`() = runTest {

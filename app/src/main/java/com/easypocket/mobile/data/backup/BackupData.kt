@@ -38,6 +38,7 @@ data class BackupPrice(
 data class BackupList(
     val id: String,
     val title: String,
+    val icon: String = "$",
 )
 
 @Serializable

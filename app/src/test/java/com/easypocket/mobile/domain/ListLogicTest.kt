@@ -34,7 +34,7 @@ class ListLogicTest {
             ShoppingListItem(2, "p1", 1.0, "s2", done = true, pinned = false),  // 8.5 done
             ShoppingListItem(3, "p2", 3.0, "s1", done = false, pinned = false), // 6
         )
-        val list = ShoppingList("l1", "Lista", items)
+        val list = ShoppingList("l1", "Lista", items = items)
         assertEquals(24.5, ListLogic.totalAmount(list, products, null), 0.001) // 10 + 8.5 + 6
         assertEquals(16.0, ListLogic.totalAmount(list, products, "s1"), 0.001) // ambos pendientes en s1: 10 + 6
         assertEquals(8.5, ListLogic.cartAmount(list, products, null), 0.001)
@@ -58,7 +58,7 @@ class ListLogicTest {
             ShoppingListItem(1, "p1", 2.0, null),
             ShoppingListItem(2, "p2", 1.0, null),
         )
-        val text = ListLogic.clipboardText(ShoppingList("l1", "Lista", items), products, Language.ENGLISH)
+        val text = ListLogic.clipboardText(ShoppingList("l1", "Lista", items = items), products, Language.ENGLISH)
         val lines = text.lines()
         assertEquals("Milk ... 2 Liters", lines[0])
         assertEquals("Bread ... 1 Unit", lines[1])

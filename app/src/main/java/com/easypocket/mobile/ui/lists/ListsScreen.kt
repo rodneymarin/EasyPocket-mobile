@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +45,7 @@ import androidx.navigation.NavController
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
+import com.easypocket.mobile.domain.ListIcon
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppFab
@@ -49,6 +53,8 @@ import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
+import com.easypocket.mobile.ui.components.ListIconCircle
+import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
@@ -73,6 +79,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
 
     var searchText by rememberSaveable { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
+    var newIcon by remember { mutableStateOf("") }
     var showCreateSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
     var listToDelete by remember { mutableStateOf<ListCardData?>(null) }
@@ -126,6 +133,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                 icon = Icons.Filled.Add,
                 onClick = {
                     newTitle = ""
+                    newIcon = ""
                     showCreateSheet = true
                 },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
@@ -139,6 +147,12 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
         heightFraction = 0.75f,
         title = t("listForm.newTitle", language),
     ) {
+        ListIconField(
+            value = newIcon,
+            onValueChange = { newIcon = it },
+            placeholder = t("listForm.icon", language),
+        )
+        Spacer(Modifier.height(16.dp))
         ListTitleInput(
             value = newTitle,
             onValueChange = { newTitle = it },
@@ -151,10 +165,11 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                 val title = newTitle.trim()
                 if (title.isNotEmpty()) {
                     scope.launch {
-                        val id = vm.createList(title)
+                        val id = vm.createList(title, newIcon.ifBlank { ListIcon.DEFAULT })
                         if (id != null) {
                             showCreateSheet = false
                             newTitle = ""
+                            newIcon = ""
                             toast.show(t("toast.listCreated", language), ToastType.SUCCESS)
                             openDetail(id)
                         }
@@ -224,9 +239,18 @@ private fun ListCardContent(
 ) {
     val appColors = LocalAppColors.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        ListIconCircle(
+            icon = card.list.icon,
+            modifier = Modifier
+                .fillMaxHeight()
+                .aspectRatio(1f),
+        )
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 text = card.list.title,

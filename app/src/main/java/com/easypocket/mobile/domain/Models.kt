@@ -16,4 +16,9 @@ data class ShoppingListItem(
     val done: Boolean = false,
     val pinned: Boolean = false,
 )
-data class ShoppingList(val id: String, val title: String, val items: List<ShoppingListItem> = emptyList())
+data class ShoppingList(
+    val id: String,
+    val title: String,
+    val icon: String = "$",
+    val items: List<ShoppingListItem> = emptyList(),
+)
