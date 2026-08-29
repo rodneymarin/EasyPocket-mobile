@@ -25,7 +25,7 @@ import com.easypocket.mobile.ui.lists.ListDetailScreen
 import com.easypocket.mobile.ui.products.ProductFormScreen
 import com.easypocket.mobile.ui.stores.StoreFormScreen
 
-private const val PAGE_COUNT = 3
+private const val PAGE_COUNT = 4
 
 @Composable
 fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
@@ -34,6 +34,7 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
         t("tab.lists", language),
         t("tab.products", language),
         t("tab.stores", language),
+        t("tab.history", language),
     )
     var selectedPage by rememberSaveable { mutableIntStateOf(0) }
     val backStackEntry by navController.currentBackStackEntryAsState()
