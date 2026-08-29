@@ -72,8 +72,8 @@ fun HistoryCategoryChart(slices: List<HistoryCategorySlice>, modifier: Modifier 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(240.dp)
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .height(300.dp)
+            .padding(horizontal = 0.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         CategoryDonut(
