@@ -209,7 +209,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         AppFab(
                             icon = Icons.Default.Add,
                             onClick = { navController.navigate("itemForm/$listId/-1") },
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 36.dp),
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                         )
                     }
                 }

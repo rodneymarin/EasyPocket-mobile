@@ -19,7 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -31,7 +35,6 @@ import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
 import com.easypocket.mobile.ui.theme.LocalAppColors
 
-private val EST_CHAR_WIDTH = 8.5.dp
 private val MORE_TOGGLE_WIDTH = 40.dp
 
 @Composable
@@ -44,6 +47,20 @@ fun StoreFilterBar(
     val language = LocalLanguage.current
     val appColors = LocalAppColors.current
     var menuOpen by remember { mutableStateOf(false) }
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val measureChipWidth: (String) -> Dp = { label ->
+        with(density) {
+            textMeasurer
+                .measure(
+                    text = AnnotatedString(label),
+                    style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                )
+                .size.width
+                .toDp() + 22.dp
+        }
+    }
 
     BoxWithConstraints(modifier) {
         val allLabel = t("listDetail.allStores", language)
@@ -52,6 +69,7 @@ fun StoreFilterBar(
             stores = stores,
             activeStoreId = activeStoreId,
             allLabel = allLabel,
+            measureWidth = measureChipWidth,
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -119,17 +137,18 @@ private fun splitFilters(
     stores: List<Store>,
     activeStoreId: String?,
     allLabel: String,
+    measureWidth: (String) -> Dp,
 ): Pair<List<Store>, List<Store>> {
     if (barWidth == Dp.Unspecified || stores.isEmpty()) {
         return stores to emptyList()
     }
-    val allWidth = 28.dp + EST_CHAR_WIDTH * allLabel.length
+    val allWidth = measureWidth(allLabel)
     var remaining = barWidth - 16.dp - allWidth - 6.dp
     val visible = mutableListOf<Store>()
     val hidden = mutableListOf<Store>()
 
     for (store in stores) {
-        val w = 28.dp + EST_CHAR_WIDTH * store.description.length
+        val w = measureWidth(store.description)
         if (w + MORE_TOGGLE_WIDTH + 6.dp <= remaining) {
             visible.add(store)
             remaining -= w + 6.dp
@@ -141,11 +160,11 @@ private fun splitFilters(
     val activeInHidden = hidden.firstOrNull { it.id == activeStoreId }
     if (activeStoreId != null && activeInHidden != null) {
         val newHidden = hidden.filterTo(mutableListOf()) { it.id != activeStoreId }
-        val promotedWidth = 28.dp + EST_CHAR_WIDTH * activeInHidden.description.length
+        val promotedWidth = measureWidth(activeInHidden.description)
         var visRemaining = barWidth - 16.dp - allWidth - 6.dp - promotedWidth - 6.dp
         val reordered = mutableListOf(activeInHidden)
         for (s in visible) {
-            val w = 28.dp + EST_CHAR_WIDTH * s.description.length
+            val w = measureWidth(s.description)
             if (w + MORE_TOGGLE_WIDTH + 6.dp <= visRemaining) {
                 reordered.add(s)
                 visRemaining -= w + 6.dp

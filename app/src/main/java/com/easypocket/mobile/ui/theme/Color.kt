@@ -9,6 +9,7 @@ data class AppColors(
     val destructiveBorder: Color, val tabBarInactive: Color,
     val panelBackground: Color, val panelText: Color, val panelBorder: Color,
     val placeholderText: Color, val inputBackground: Color, val secondaryButton: Color,
+    val panelInputBackground: Color,
 )
 
 val LightColors = AppColors(
@@ -20,7 +21,7 @@ val LightColors = AppColors(
     tabBarInactive = Color(0xFF8E8E93), panelBackground = Color(0xFFFFFFFF),
     panelText = Color(0xFF333333), panelBorder = Color(0xFFE0E0E0),
     placeholderText = Color(0xFF999999), inputBackground = Color(0xFFFFFFFF),
-    secondaryButton = Color(0xFFD8D8DE),
+    secondaryButton = Color(0xFFD8D8DE), panelInputBackground = Color(0xFFE9E9EE),
 )
 
 val DarkColors = AppColors(
@@ -32,5 +33,5 @@ val DarkColors = AppColors(
     tabBarInactive = Color(0xFF636366), panelBackground = Color(0xFF1C1C1C),
     panelText = Color(0xFFF5F5F5), panelBorder = Color(0xFF38383A),
     placeholderText = Color(0xFF666666), inputBackground = Color(0xFF1A1A1D),
-    secondaryButton = Color(0xFF2C2C2C),
+    secondaryButton = Color(0xFF2C2C2C), panelInputBackground = Color(0xFF26262A),
 )

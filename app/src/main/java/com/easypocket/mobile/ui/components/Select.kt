@@ -58,7 +58,7 @@ fun SelectField(
             .fillMaxWidth()
             .height(45.dp)
             .clip(RoundedCornerShape(999.dp))
-            .background(appColors.inputBackground)
+            .background(inputContainerColor())
             .clickable { expanded = true }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
