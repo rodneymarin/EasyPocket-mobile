@@ -10,3 +10,5 @@ captures/
 .cxx/
 
 hs_err_*.log
+
+app/release/
