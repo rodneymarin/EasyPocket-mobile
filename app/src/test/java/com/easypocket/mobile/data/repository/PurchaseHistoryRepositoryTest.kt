@@ -79,6 +79,21 @@ class PurchaseHistoryRepositoryTest {
     }
 
     @Test
+    fun `archiveCompleted records the category code of each item`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u", categoryId = null))
+        db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, quantity = 1.0, done = true))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p2", storeId = null, quantity = 1.0, done = true))
+
+        repo.archiveCompleted("l1")
+
+        val items = repo.observeAll().first().first().items.associateBy { it.productName }
+        assertEquals("ABC123", items.getValue("Milk").categoryCode)
+        assertEquals(null, items.getValue("Bread").categoryCode)
+    }
+
+    @Test
     fun `archiveCompleted without done items does nothing`() = runTest {
         db.productDao().insert(ProductEntity("p1", "Milk", "u"))
         db.listDao().insert(ShoppingListEntity("l1", "Weekly", "$"))

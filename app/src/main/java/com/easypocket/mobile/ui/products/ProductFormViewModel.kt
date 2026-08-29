@@ -1,8 +1,10 @@
 package com.easypocket.mobile.ui.products
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.StoreRepository
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
@@ -25,8 +27,10 @@ data class ProductFormUiState(
     val productId: String? = null,
     val name: String = "",
     val unit: UnitOfMeasurement = UnitOfMeasurement.UNIT,
+    val categoryId: String? = null,
     val prices: List<ProductPriceRow> = emptyList(),
     val availableStores: List<Store> = emptyList(),
+    val availableCategories: List<Category> = emptyList(),
     val nameError: Boolean = false,
     val isEdit: Boolean = false,
 )
@@ -35,6 +39,7 @@ data class ProductFormUiState(
 class ProductFormViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
     private val storesRepository: StoreRepository,
+    private val categoriesRepository: CategoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductFormUiState())
@@ -45,8 +50,9 @@ class ProductFormViewModel @Inject constructor(
     suspend fun load(productId: String?) {
         val stores = storesRepository.getAll()
         allStores = stores
+        val categories = categoriesRepository.getAll()
         if (productId == null) {
-            _uiState.value = ProductFormUiState(availableStores = stores)
+            _uiState.value = ProductFormUiState(availableStores = stores, availableCategories = categories)
             return
         }
         val product = productsRepository.getAll().firstOrNull { it.id == productId }
@@ -55,12 +61,20 @@ class ProductFormViewModel @Inject constructor(
                 productId = product.id,
                 name = product.productName,
                 unit = product.unitOfMeasurement,
+                categoryId = product.categoryId,
                 prices = product.prices.map { ProductPriceRow(it.storeId, storeNameOf(it.storeId), ListLogic.trimQuantity(it.value)) },
+                availableStores = stores,
+                availableCategories = categories,
                 isEdit = true,
             )
             recomputeAvailable()
         } else {
-            _uiState.value = ProductFormUiState(isEdit = true, productId = productId, availableStores = stores)
+            _uiState.value = ProductFormUiState(
+                isEdit = true,
+                productId = productId,
+                availableStores = stores,
+                availableCategories = categories,
+            )
         }
     }
 
@@ -70,6 +84,10 @@ class ProductFormViewModel @Inject constructor(
 
     fun setUnit(unit: UnitOfMeasurement) {
         _uiState.update { it.copy(unit = unit) }
+    }
+
+    fun setCategoryId(categoryId: String?) {
+        _uiState.update { it.copy(categoryId = categoryId) }
     }
 
     fun addPrice(storeId: String, value: String) {
@@ -107,11 +125,11 @@ class ProductFormViewModel @Inject constructor(
         }
         val prices = state.prices.mapNotNull { r -> r.value.toDoubleOrNull()?.let { Price(r.storeId, it) } }
         val saved = if (state.isEdit && state.productId != null) {
-            val product = Product(state.productId, name, state.unit, prices)
+            val product = Product(state.productId, name, state.unit, prices, state.categoryId)
             productsRepository.update(product)
             product
         } else {
-            productsRepository.create(name, state.unit, prices)
+            productsRepository.create(name, state.unit, prices, state.categoryId)
         }
         _uiState.update { it.copy(productId = saved.id, nameError = false) }
         onSaved()

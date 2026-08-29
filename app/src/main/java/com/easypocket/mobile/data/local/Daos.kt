@@ -25,6 +25,30 @@ interface StoreDao {
 }
 
 @Dao
+interface CategoryDao {
+    @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE")
+    fun getAll(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM categories WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): CategoryEntity?
+
+    @Query("SELECT * FROM categories WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+    suspend fun getByName(name: String): CategoryEntity?
+
+    @Query("SELECT id FROM categories")
+    suspend fun getAllIds(): List<String>
+
+    @Insert
+    suspend fun insert(category: CategoryEntity)
+
+    @Update
+    suspend fun update(category: CategoryEntity)
+
+    @Query("DELETE FROM categories WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
+}
+
+@Dao
 interface ProductDao {
     @Query("SELECT * FROM products ORDER BY product_name COLLATE NOCASE")
     fun getAll(): Flow<List<ProductEntity>>
@@ -40,6 +64,9 @@ interface ProductDao {
 
     @Query("DELETE FROM products WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>)
+
+    @Query("UPDATE products SET category_id = NULL WHERE category_id IN (:categoryIds)")
+    suspend fun clearCategory(categoryIds: List<String>)
 }
 
 @Dao

@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Storefront
@@ -33,11 +35,11 @@ import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.ui.theme.LocalAppColors
 
 private val unselectedIcons = listOf(
-    Icons.Outlined.List, Icons.Outlined.ViewInAr, Icons.Outlined.Storefront, Icons.Outlined.History,
+    Icons.Outlined.List, Icons.Outlined.ViewInAr, Icons.Outlined.Category, Icons.Outlined.Storefront, Icons.Outlined.History,
 )
 
 private val selectedIcons = listOf(
-    Icons.Filled.List, Icons.Filled.ViewInAr, Icons.Filled.Storefront, Icons.Filled.History,
+    Icons.Filled.List, Icons.Filled.ViewInAr, Icons.Filled.Category, Icons.Filled.Storefront, Icons.Filled.History,
 )
 
 @Composable

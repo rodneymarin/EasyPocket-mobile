@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
@@ -29,6 +30,7 @@ class ProductFormViewModelTest {
     private lateinit var db: EasyPocketDatabase
     private lateinit var storesRepository: StoreRepository
     private lateinit var productsRepository: ProductRepository
+    private lateinit var categoriesRepository: CategoryRepository
 
     @After
     fun tearDown() {
@@ -41,10 +43,11 @@ class ProductFormViewModelTest {
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
         productsRepository = ProductRepository(db.productDao(), db.priceDao())
+        categoriesRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
         Seeder(db).seedIfEmpty()
     }
 
-    private fun vm() = ProductFormViewModel(productsRepository, storesRepository)
+    private fun vm() = ProductFormViewModel(productsRepository, storesRepository, categoriesRepository)
 
     @Test
     fun `load without id seeds a new form`() = runTest {

@@ -167,6 +167,21 @@ private fun ProductFormFields(
         placeholder = t("products.addModal.unitLabel", language),
     )
 
+    Spacer(Modifier.height(16.dp))
+    FieldLabel(text = t("products.categoryLabel", language))
+    Spacer(Modifier.height(6.dp))
+    val categoryOptions = buildList {
+        add(SelectOption(id = "", label = t("products.categoryNone", language)))
+        state.availableCategories.forEach { category ->
+            add(SelectOption(id = category.id, label = category.name))
+        }
+    }
+    SelectField(
+        options = categoryOptions,
+        onSelect = { id -> vm.setCategoryId(id.ifEmpty { null }) },
+        selectedId = state.categoryId ?: "",
+    )
+
     Spacer(Modifier.height(20.dp))
     PricesSection(state = state, vm = vm, language = language, appColors = appColors)
 }

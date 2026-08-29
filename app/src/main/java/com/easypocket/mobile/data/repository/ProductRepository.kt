@@ -26,6 +26,7 @@ class ProductRepository @Inject constructor(
                 p.productName,
                 UnitOfMeasurement.fromRaw(p.unitOfMeasurement) ?: UnitOfMeasurement.UNIT,
                 prices[p.id].orEmpty().map { Price(it.storeId, it.value) },
+                p.categoryId,
             )
         }
     }
@@ -38,6 +39,7 @@ class ProductRepository @Inject constructor(
             entity.productName,
             UnitOfMeasurement.fromRaw(entity.unitOfMeasurement) ?: UnitOfMeasurement.UNIT,
             prices.map { Price(it.storeId, it.value) },
+            entity.categoryId,
         )
     }
 
@@ -46,15 +48,20 @@ class ProductRepository @Inject constructor(
         return if (found.id == excludeId) null else getByName(found.productName)
     }
 
-    suspend fun create(name: String, unit: UnitOfMeasurement, prices: List<Price> = emptyList()): Product {
+    suspend fun create(
+        name: String,
+        unit: UnitOfMeasurement,
+        prices: List<Price> = emptyList(),
+        categoryId: String? = null,
+    ): Product {
         val id = UUID.randomUUID().toString()
-        productDao.insert(ProductEntity(id, name, unit.raw))
+        productDao.insert(ProductEntity(id, name, unit.raw, categoryId))
         priceDao.insertAll(prices.map { PriceEntity(id, it.storeId, it.value) })
-        return Product(id, name, unit, prices)
+        return Product(id, name, unit, prices, categoryId)
     }
 
     suspend fun update(product: Product) {
-        productDao.update(ProductEntity(product.id, product.productName, product.unitOfMeasurement.raw))
+        productDao.update(ProductEntity(product.id, product.productName, product.unitOfMeasurement.raw, product.categoryId))
         priceDao.deleteForProduct(product.id)
         priceDao.insertAll(product.prices.map { PriceEntity(product.id, it.storeId, it.value) })
     }

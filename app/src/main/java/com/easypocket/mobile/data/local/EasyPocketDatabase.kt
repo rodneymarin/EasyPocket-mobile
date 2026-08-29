@@ -7,15 +7,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
-        StoreEntity::class, ProductEntity::class, PriceEntity::class,
+        StoreEntity::class, CategoryEntity::class, ProductEntity::class, PriceEntity::class,
         ShoppingListEntity::class, ShoppingListItemEntity::class,
         PurchaseHistoryEntity::class, PurchaseHistoryItemEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class EasyPocketDatabase : RoomDatabase() {
     abstract fun storeDao(): StoreDao
+    abstract fun categoryDao(): CategoryDao
     abstract fun productDao(): ProductDao
     abstract fun priceDao(): PriceDao
     abstract fun listDao(): ShoppingListDao
@@ -55,6 +56,19 @@ abstract class EasyPocketDatabase : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS `index_purchase_history_items_history_id` " +
                         "ON `purchase_history_items` (`history_id`)"
                 )
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `categories` (" +
+                        "`id` TEXT NOT NULL PRIMARY KEY, " +
+                        "`name` TEXT NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_categories_name` ON `categories` (`name`)")
+                db.execSQL("ALTER TABLE `products` ADD COLUMN `category_id` TEXT")
+                db.execSQL("ALTER TABLE `purchase_history_items` ADD COLUMN `category_code` TEXT")
             }
         }
     }

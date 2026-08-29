@@ -1,11 +1,9 @@
-package com.easypocket.mobile.ui.products
+package com.easypocket.mobile.ui.categories
 
 import androidx.lifecycle.ViewModel
 import com.easypocket.mobile.data.repository.CategoryRepository
-import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
-import com.easypocket.mobile.domain.Product
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,12 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-data class ProductListUiState(
-    val products: List<Product> = emptyList(),
+data class CategoryListUiState(
     val categories: List<Category> = emptyList(),
-    val selectedCategoryId: String? = null,
     val search: String = "",
-    val filtered: List<Product> = emptyList(),
+    val filtered: List<Category> = emptyList(),
     val selection: Set<String> = emptySet(),
     val isLoading: Boolean = true,
 ) {
@@ -26,22 +22,19 @@ data class ProductListUiState(
 }
 
 @HiltViewModel
-class ProductListViewModel @Inject constructor(
-    private val productsRepository: ProductRepository,
+class CategoryListViewModel @Inject constructor(
     private val categoriesRepository: CategoryRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ProductListUiState())
-    val uiState: StateFlow<ProductListUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(CategoryListUiState())
+    val uiState: StateFlow<CategoryListUiState> = _uiState.asStateFlow()
 
     suspend fun refresh() {
         try {
-            val products = productsRepository.getAll()
             val categories = categoriesRepository.getAll()
             _uiState.value = _uiState.value.copy(
-                products = products,
                 categories = categories,
-                filtered = filter(products, _uiState.value.search, _uiState.value.selectedCategoryId),
+                filtered = filter(categories, _uiState.value.search),
                 isLoading = false,
             )
         } catch (t: Throwable) {
@@ -50,15 +43,7 @@ class ProductListViewModel @Inject constructor(
     }
 
     fun setSearch(query: String) {
-        _uiState.update {
-            it.copy(search = query, filtered = filter(it.products, query, it.selectedCategoryId))
-        }
-    }
-
-    fun setCategoryFilter(categoryId: String?) {
-        _uiState.update {
-            it.copy(selectedCategoryId = categoryId, filtered = filter(it.products, it.search, categoryId))
-        }
+        _uiState.update { it.copy(search = query, filtered = filter(it.categories, query)) }
     }
 
     fun setSelection(ids: Set<String>) {
@@ -76,19 +61,14 @@ class ProductListViewModel @Inject constructor(
     suspend fun deleteSelected() {
         val ids = _uiState.value.selection
         if (ids.isEmpty()) return
-        productsRepository.deleteAll(ids.toList())
+        categoriesRepository.deleteAll(ids.toList())
         _uiState.update { it.copy(selection = emptySet()) }
         refresh()
     }
 
-    private fun filter(products: List<Product>, query: String, categoryId: String?): List<Product> {
-        val byCategory = if (categoryId == null) {
-            products
-        } else {
-            products.filter { it.categoryId == categoryId }
-        }
+    private fun filter(categories: List<Category>, query: String): List<Category> {
         val normalized = ListLogic.normalize(query.trim())
-        if (normalized.isEmpty()) return byCategory
-        return byCategory.filter { ListLogic.normalize(it.productName).contains(normalized) }
+        if (normalized.isEmpty()) return categories
+        return categories.filter { ListLogic.normalize(it.name).contains(normalized) }
     }
 }

@@ -2,6 +2,7 @@ package com.easypocket.mobile.di
 
 import android.content.Context
 import androidx.room.Room
+import com.easypocket.mobile.data.local.CategoryDao
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.ProductDao
@@ -24,12 +25,15 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): EasyPocketDatabase =
         Room.databaseBuilder(context, EasyPocketDatabase::class.java, "easypocket.db")
-            .addMigrations(EasyPocketDatabase.MIGRATION_1_2, EasyPocketDatabase.MIGRATION_2_3)
+            .addMigrations(EasyPocketDatabase.MIGRATION_1_2, EasyPocketDatabase.MIGRATION_2_3, EasyPocketDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
 
     @Provides
     fun provideStoreDao(db: EasyPocketDatabase): StoreDao = db.storeDao()
+
+    @Provides
+    fun provideCategoryDao(db: EasyPocketDatabase): CategoryDao = db.categoryDao()
 
     @Provides
     fun provideProductDao(db: EasyPocketDatabase): ProductDao = db.productDao()

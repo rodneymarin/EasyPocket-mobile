@@ -1,4 +1,4 @@
-package com.easypocket.mobile.ui.products
+package com.easypocket.mobile.ui.categories
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -24,42 +24,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.easypocket.mobile.domain.ListLogic
-import com.easypocket.mobile.domain.Product
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
+import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
-import androidx.compose.foundation.lazy.itemsIndexed
-import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
-import com.easypocket.mobile.ui.components.SelectField
-import com.easypocket.mobile.ui.components.SelectOption
-import com.easypocket.mobile.ui.components.Tag
-import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.theme.AppColors
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,8 +61,8 @@ import kotlinx.coroutines.launch
 private const val SEARCH_DEBOUNCE_MS = 300L
 
 @Composable
-fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTick: Int = 0) {
-    val vm: ProductListViewModel = hiltViewModel()
+fun CategoriesScreen(navController: NavController, onMenuClick: () -> Unit, refreshTick: Int = 0) {
+    val vm: CategoryListViewModel = hiltViewModel()
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val toast = LocalToastState.current
@@ -96,7 +90,7 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
             .padding(top = 60.dp),
     ) {
         AppHeader(
-            title = t("tab.products", language),
+            title = t("tab.categories", language),
             onMenuClick = onMenuClick,
         )
         if (isSelectionMode) {
@@ -107,50 +101,37 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                 language = language,
             )
         } else {
-            Row(
+            SearchInput(
+                value = searchText,
+                onValueChange = { searchText = it },
+                placeholder = t("search.categories", language),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SearchInput(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    placeholder = t("search.products", language),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            SelectField(
-                options = categoryFilterOptions(uiState, language),
-                selectedId = uiState.selectedCategoryId,
-                label = t("products.categoryAll", language),
-                onSelect = { id -> vm.setCategoryFilter(id.ifEmpty { null }) },
-                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 uiState.isLoading -> LoadingState(language)
-                uiState.filtered.isNotEmpty() -> ProductsList(
+                uiState.filtered.isNotEmpty() -> CategoriesList(
                     uiState = uiState,
                     language = language,
-                    onProductPress = { id ->
+                    onCategoryPress = { id ->
                         if (isSelectionMode) vm.toggleSelection(id)
-                        else navController.navigate("productForm/$id")
+                        else navController.navigate("categoryForm/$id")
                     },
-                    onProductLongPress = { id ->
+                    onCategoryLongPress = { id ->
                         if (!isSelectionMode) vm.setSelection(setOf(id))
                     },
                 )
                 else -> EmptyState(
-                    text = if (uiState.products.isEmpty()) t("products.empty", language) else t("common.noResults", language),
+                    text = if (uiState.categories.isEmpty()) t("categories.empty", language) else t("common.noResults", language),
                 )
             }
             if (!isSelectionMode) {
                 AppFab(
                     icon = Icons.Filled.Add,
-                    onClick = { navController.navigate("productForm/new") },
+                    onClick = { navController.navigate("categoryForm/new") },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 )
             }
@@ -159,15 +140,15 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
 
     ConfirmSheet(
         visible = showDeleteSheet,
-        title = t("products.deleteSelected.title", language),
-        message = t("products.deleteSelected.confirmMessage", language, mapOf("count" to uiState.selection.size.toString())),
-        warning = t("products.deleteSelected.warning", language),
-        confirmLabel = t("products.deleteSelected.confirm", language),
+        title = t("categories.deleteSelected.title", language),
+        message = t("categories.deleteSelected.confirmMessage", language, mapOf("count" to uiState.selection.size.toString())),
+        warning = t("categories.deleteSelected.warning", language),
+        confirmLabel = t("categories.deleteSelected.confirm", language),
         onConfirm = {
             scope.launch {
                 vm.deleteSelected()
                 showDeleteSheet = false
-                toast.show(t("toast.productsDeleted", language), ToastType.SUCCESS)
+                toast.show(t("toast.categoriesDeleted", language), ToastType.SUCCESS)
             }
         },
         onDismiss = { showDeleteSheet = false },
@@ -203,7 +184,7 @@ private fun SelectionHeader(
         )
         Spacer(Modifier.width(8.dp))
         AppButton(
-            text = "${t("products.deleteSelected.confirm", language)} ($selectedCount)",
+            text = "${t("categories.deleteSelected.confirm", language)} ($selectedCount)",
             onClick = onDelete,
             variant = ButtonVariant.DESTRUCTIVE,
         )
@@ -211,28 +192,26 @@ private fun SelectionHeader(
 }
 
 @Composable
-private fun ProductsList(
-    uiState: ProductListUiState,
+private fun CategoriesList(
+    uiState: CategoryListUiState,
     language: Language,
-    onProductPress: (String) -> Unit,
-    onProductLongPress: (String) -> Unit,
+    onCategoryPress: (String) -> Unit,
+    onCategoryLongPress: (String) -> Unit,
 ) {
     AppItemList(
-        footerText = t("products.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
+        footerText = t("categories.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
     ) {
-        itemsIndexed(uiState.filtered, key = { _, product -> product.id }) { index, product ->
+        itemsIndexed(uiState.filtered, key = { _, category -> category.id }) { index, category ->
             ListItemRow(
-                onClick = { onProductPress(product.id) },
-                onLongClick = { onProductLongPress(product.id) },
+                onClick = { onCategoryPress(category.id) },
+                onLongClick = { onCategoryLongPress(category.id) },
                 isFirst = index == 0,
                 isLast = index == uiState.filtered.lastIndex,
             ) {
-                ProductCardContent(
-                    product = product,
+                CategoryCardContent(
+                    category = category,
                     isSelectionMode = uiState.isSelectionMode,
-                    isSelected = product.id in uiState.selection,
-                    categoryName = uiState.categories.firstOrNull { it.id == product.categoryId }?.name,
-                    language = language,
+                    isSelected = category.id in uiState.selection,
                 )
             }
         }
@@ -240,12 +219,10 @@ private fun ProductsList(
 }
 
 @Composable
-private fun ProductCardContent(
-    product: Product,
+private fun CategoryCardContent(
+    category: Category,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    categoryName: String?,
-    language: Language,
 ) {
     val appColors = LocalAppColors.current
     Row(
@@ -257,43 +234,24 @@ private fun ProductCardContent(
             Spacer(Modifier.width(8.dp))
         }
         Text(
-            text = product.productName,
+            text = category.name,
             color = appColors.text,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
         )
-        if (categoryName != null) {
-            Spacer(Modifier.width(6.dp))
-            Tag(text = categoryName, size = TagSize.SM)
-        }
-        Spacer(Modifier.width(8.dp))
-        Tag(
-            text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
-            size = TagSize.SM,
-        )
-    }
-}
-
-private fun categoryFilterOptions(
-    uiState: ProductListUiState,
-    language: Language,
-): List<SelectOption> = buildList {
-    add(SelectOption(id = "", label = t("products.categoryAll", language)))
-    uiState.categories.forEach { category ->
-        add(SelectOption(id = category.id, label = category.name))
     }
 }
 
 @Composable
-private fun SelectionCircle(isSelected: Boolean, appColors: com.easypocket.mobile.ui.theme.AppColors) {
+private fun SelectionCircle(isSelected: Boolean, appColors: AppColors) {
     Box(
         modifier = Modifier
             .size(24.dp)
             .clip(CircleShape)
-            .background(if (isSelected) appColors.primary else androidx.compose.ui.graphics.Color.Transparent)
+            .background(if (isSelected) appColors.primary else Color.Transparent)
             .border(2.dp, appColors.textSecondary, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
@@ -301,7 +259,7 @@ private fun SelectionCircle(isSelected: Boolean, appColors: com.easypocket.mobil
             Icon(
                 Icons.Filled.Check,
                 contentDescription = null,
-                tint = androidx.compose.ui.graphics.Color.White,
+                tint = Color.White,
                 modifier = Modifier.size(14.dp),
             )
         }

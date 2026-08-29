@@ -107,6 +107,10 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
 
     RecordDetailSheet(
         record = selectedRecord,
+        categoryNameOf = { code ->
+            uiState.categories.firstOrNull { it.id == code }?.name
+                ?: t("history.noCategory", language)
+        },
         language = language,
         onDismiss = { selectedRecord = null },
     )
@@ -202,6 +206,7 @@ private fun RecordCardContent(record: PurchaseHistoryWithItems) {
 @Composable
 private fun RecordDetailSheet(
     record: PurchaseHistoryWithItems?,
+    categoryNameOf: (String?) -> String,
     language: Language,
     onDismiss: () -> Unit,
 ) {
@@ -223,6 +228,7 @@ private fun RecordDetailSheet(
                         Text(
                             text = listOfNotNull(
                                 item.storeName ?: t("listDetail.noStore", language),
+                                categoryNameOf(item.categoryCode),
                                 "${ListLogic.trimQuantity(item.quantity)} x $${formatAmount(item.unitPrice)}",
                             ).joinToString(" · "),
                             color = appColors.textSecondary,

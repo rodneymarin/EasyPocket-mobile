@@ -20,12 +20,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.easypocket.mobile.AppViewModel
 import com.easypocket.mobile.i18n.t
+import com.easypocket.mobile.ui.categories.CategoryFormScreen
 import com.easypocket.mobile.ui.lists.ItemFormScreen
 import com.easypocket.mobile.ui.lists.ListDetailScreen
 import com.easypocket.mobile.ui.products.ProductFormScreen
 import com.easypocket.mobile.ui.stores.StoreFormScreen
 
-private const val PAGE_COUNT = 4
+private const val PAGE_COUNT = 5
 
 @Composable
 fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
@@ -33,6 +34,7 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
     val labels = listOf(
         t("tab.lists", language),
         t("tab.products", language),
+        t("tab.categories", language),
         t("tab.stores", language),
         t("tab.history", language),
     )
@@ -89,6 +91,10 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
                 composable("storeForm/{storeId}") { backStackEntry ->
                     val storeId = backStackEntry.arguments?.getString("storeId") ?: return@composable
                     StoreFormScreen(navController = navController, storeId = storeId)
+                }
+                composable("categoryForm/{categoryId}") { backStackEntry ->
+                    val categoryId = backStackEntry.arguments?.getString("categoryId") ?: return@composable
+                    CategoryFormScreen(navController = navController, categoryId = categoryId)
                 }
             }
         }

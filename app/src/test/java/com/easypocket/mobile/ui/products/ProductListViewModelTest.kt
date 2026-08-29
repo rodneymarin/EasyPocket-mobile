@@ -3,7 +3,9 @@ package com.easypocket.mobile.ui.products
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.seed.Seeder
@@ -41,8 +43,32 @@ class ProductListViewModelTest {
         productsRepository = ProductRepository(db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
         Seeder(db).seedIfEmpty()
-        vm = ProductListViewModel(productsRepository)
+        vm = ProductListViewModel(productsRepository, CategoryRepository(db, db.categoryDao(), db.productDao()))
         return vm
+    }
+
+    @Test
+    fun `category filter narrows results and all shows everything`() = runTest {
+        val vm = createVm()
+        vm.refresh()
+
+        db.categoryDao().insert(CategoryEntity("CAT001", "Abarrotes"))
+        val target = productsRepository.getAll().first()
+        productsRepository.update(target.copy(categoryId = "CAT001"))
+        vm.refresh()
+
+        vm.setCategoryFilter("CAT001")
+        assertEquals(1, vm.uiState.value.filtered.size)
+        assertEquals(target.id, vm.uiState.value.filtered.first().id)
+        assertEquals("CAT001", vm.uiState.value.categories.first().id)
+
+        vm.setSearch("zzz-no-match")
+        assertTrue(vm.uiState.value.filtered.isEmpty())
+        vm.setSearch("")
+        assertEquals(1, vm.uiState.value.filtered.size)
+
+        vm.setCategoryFilter(null)
+        assertEquals(10, vm.uiState.value.filtered.size)
     }
 
     @Test

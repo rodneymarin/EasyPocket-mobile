@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
+import com.easypocket.mobile.domain.Category
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 
 data class HistoryUiState(
     val records: List<PurchaseHistoryWithItems> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val rangeDays: Int? = 7,
     val isLoading: Boolean = true,
 ) {
@@ -41,6 +44,7 @@ data class HistoryUiState(
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     historyRepository: PurchaseHistoryRepository,
+    categoriesRepository: CategoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistoryUiState())
@@ -50,6 +54,11 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             historyRepository.observeAll().collect { records ->
                 _uiState.value = _uiState.value.copy(records = records, isLoading = false)
+            }
+        }
+        viewModelScope.launch {
+            categoriesRepository.observeAll().collect { categories ->
+                _uiState.value = _uiState.value.copy(categories = categories)
             }
         }
     }

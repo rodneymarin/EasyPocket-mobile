@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.util.MainDispatcherRule
 import java.time.LocalDate
@@ -43,7 +44,7 @@ class HistoryViewModelTest {
             priceDao = db.priceDao(),
             storeDao = db.storeDao(),
         )
-        return HistoryViewModel(repo)
+        return HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.productDao()))
     }
 
     private fun entity(date: String, total: Double) = PurchaseHistoryEntity(

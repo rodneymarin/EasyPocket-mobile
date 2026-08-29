@@ -163,6 +163,79 @@ class DatabaseTest {
     }
 
     @Test
+    fun `migration 3 to 4 creates categories and adds category columns`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(3) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE products (id TEXT NOT NULL PRIMARY KEY, product_name TEXT NOT NULL, unit_of_measurement TEXT NOT NULL)")
+                        db.execSQL(
+                            "CREATE TABLE purchase_history_items (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "history_id TEXT NOT NULL, product_name TEXT NOT NULL, store_name TEXT, " +
+                                "quantity REAL NOT NULL, unit_price REAL NOT NULL, total_price REAL NOT NULL)"
+                        )
+                        db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement) VALUES ('p1', 'Milk', 'lt')")
+                        db.execSQL(
+                            "INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price) " +
+                                "VALUES ('h1', 'Milk', null, 1.0, 2.0, 2.0)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_3_4.migrate(db)
+
+        db.execSQL("INSERT INTO categories (id, name) VALUES ('ABC123', 'Abarrotes')")
+        db.query("SELECT product_name, category_id FROM products WHERE id = 'p1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Milk", cursor.getString(0))
+            assertNull(cursor.getString(1))
+        }
+        db.query("SELECT category_code FROM purchase_history_items LIMIT 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertNull(cursor.getString(0))
+        }
+        helper.close()
+    }
+
+    @Test
+    fun `clearCategory nulls category_id only for matching products`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u", categoryId = "XYZ789"))
+        db.productDao().insert(ProductEntity("p3", "Rice", "u", categoryId = null))
+
+        db.productDao().clearCategory(listOf("ABC123"))
+
+        val products = db.productDao().getAll().first().associateBy { it.id }
+        assertNull(products.getValue("p1").categoryId)
+        assertEquals("XYZ789", products.getValue("p2").categoryId)
+        assertNull(products.getValue("p3").categoryId)
+    }
+
+    @Test
+    fun `category dao crud and case insensitive lookup`() = runTest {
+        db.categoryDao().insert(CategoryEntity("ABC123", "Abarrotes"))
+
+        assertEquals("ABC123", db.categoryDao().getByName("abarrotes")!!.id)
+        assertEquals("ABC123", db.categoryDao().getById("ABC123")!!.id)
+        assertNull(db.categoryDao().getByName("No existe"))
+        assertNull(db.categoryDao().getById("NOPE99"))
+
+        db.categoryDao().update(CategoryEntity("ABC123", "Despensa"))
+        assertEquals("Despensa", db.categoryDao().getById("ABC123")!!.name)
+
+        db.categoryDao().deleteByIds(listOf("ABC123"))
+        assertTrue(db.categoryDao().getAll().first().isEmpty())
+    }
+
+    @Test
     fun `delete history record cascades items`() = runTest {
         db.purchaseHistoryDao().insertHistory(
             PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)

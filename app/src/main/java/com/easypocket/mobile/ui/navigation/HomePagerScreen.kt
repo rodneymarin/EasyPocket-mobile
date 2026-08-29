@@ -11,13 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.easypocket.mobile.AppViewModel
+import com.easypocket.mobile.ui.categories.CategoriesScreen
 import com.easypocket.mobile.ui.history.HistoryScreen
 import com.easypocket.mobile.ui.lists.ListsScreen
 import com.easypocket.mobile.ui.products.ProductsScreen
 import com.easypocket.mobile.ui.stores.StoresScreen
 import kotlinx.coroutines.flow.drop
 
-private const val PAGE_COUNT = 4
+private const val PAGE_COUNT = 5
 
 @Composable
 fun HomePagerScreen(
@@ -56,12 +57,17 @@ fun HomePagerScreen(
                 onMenuClick = { vm.openMenu() },
                 refreshTick = refreshTick,
             )
-            2 -> StoresScreen(
+            2 -> CategoriesScreen(
                 navController = navController,
                 onMenuClick = { vm.openMenu() },
                 refreshTick = refreshTick,
             )
-            3 -> HistoryScreen(
+            3 -> StoresScreen(
+                navController = navController,
+                onMenuClick = { vm.openMenu() },
+                refreshTick = refreshTick,
+            )
+            4 -> HistoryScreen(
                 onMenuClick = { vm.openMenu() },
             )
         }

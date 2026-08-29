@@ -7,6 +7,7 @@ data class BackupData(
     val version: Int,
     val exportedAt: String,
     val stores: List<BackupStore>,
+    val categories: List<BackupCategory> = emptyList(),
     val products: List<BackupProduct>,
     val prices: List<BackupPrice>,
     val shoppingLists: List<BackupList>,
@@ -23,10 +24,17 @@ data class BackupStore(
 )
 
 @Serializable
+data class BackupCategory(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
 data class BackupProduct(
     val id: String,
     val productName: String,
     val unitOfMeasurement: String,
+    val categoryId: String? = null,
 )
 
 @Serializable
@@ -72,4 +80,5 @@ data class BackupPurchaseHistoryItem(
     val quantity: Double,
     val unitPrice: Double,
     val totalPrice: Double,
+    val categoryCode: String? = null,
 )

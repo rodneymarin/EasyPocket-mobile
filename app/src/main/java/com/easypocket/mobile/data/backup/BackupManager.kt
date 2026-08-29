@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.room.withTransaction
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
@@ -28,6 +29,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
 
     suspend fun exportToString(): String {
         val stores = db.storeDao().getAll().first()
+        val categories = db.categoryDao().getAll().first()
         val products = db.productDao().getAll().first()
         val prices = db.priceDao().getAll().first()
         val lists = db.listDao().getAll().first()
@@ -36,7 +38,8 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             version = SUPPORTED_VERSION,
             exportedAt = Instant.now().toString(),
             stores = stores.map { BackupStore(it.id, it.description, it.color) },
-            products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement) },
+            categories = categories.map { BackupCategory(it.id, it.name) },
+            products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement, it.categoryId) },
             prices = prices.map { BackupPrice(it.productId, it.storeId, it.value) },
             shoppingLists = lists.map { BackupList(it.list.id, it.list.title, it.list.icon) },
             listItems = lists.flatMap { it.items.map { i ->
@@ -50,7 +53,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                 h.items.map { i ->
                     BackupPurchaseHistoryItem(
                         h.record.id, i.productName, i.storeName,
-                        i.quantity, i.unitPrice, i.totalPrice,
+                        i.quantity, i.unitPrice, i.totalPrice, i.categoryCode,
                     )
                 }
             },
@@ -86,7 +89,8 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
         db.withTransaction {
             db.clearAllTables()
             backup.stores.forEach { db.storeDao().insert(StoreEntity(it.id, it.description, it.color)) }
-            backup.products.forEach { db.productDao().insert(ProductEntity(it.id, it.productName, it.unitOfMeasurement)) }
+            backup.categories.forEach { db.categoryDao().insert(CategoryEntity(it.id, it.name)) }
+            backup.products.forEach { db.productDao().insert(ProductEntity(it.id, it.productName, it.unitOfMeasurement, it.categoryId)) }
             if (backup.prices.isNotEmpty()) {
                 db.priceDao().insertAll(backup.prices.map { PriceEntity(it.productId, it.storeId, it.value) })
             }
@@ -118,6 +122,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                         quantity = i.quantity,
                         unitPrice = i.unitPrice,
                         totalPrice = i.totalPrice,
+                        categoryCode = i.categoryCode,
                     )
                 })
             }
