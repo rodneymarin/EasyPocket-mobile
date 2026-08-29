@@ -1,5 +1,8 @@
 package com.easypocket.mobile.ui.history
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -23,10 +28,16 @@ import java.util.Locale
 
 private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("dd/MM")
 
+private const val RISE_DURATION_MS = 600
+
 @Composable
 fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modifier) {
     val appColors = LocalAppColors.current
     val maxValue = points.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: return
+    val riseProgress = remember(points) { Animatable(0f) }
+    LaunchedEffect(points) {
+        riseProgress.animateTo(1f, tween(durationMillis = RISE_DURATION_MS, easing = FastOutSlowInEasing))
+    }
     Column(modifier.fillMaxWidth()) {
         Text(
             text = "$${String.format(Locale.US, "%.2f", maxValue)}",
@@ -40,11 +51,25 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                 .height(140.dp)
                 .padding(horizontal = 4.dp),
         ) {
+            val progress = riseProgress.value
+            fun animatedY(point: HistoryChartPoint): Float {
+                val target = size.height * (1f - (point.total / maxValue).toFloat())
+                return size.height + (target - size.height) * progress
+            }
             val linePath = Path()
+            var prevX = 0f
+            var prevY = 0f
             points.forEachIndexed { index, point ->
                 val x = if (points.size == 1) size.width / 2f else index * size.width / (points.size - 1)
-                val y = size.height * (1f - (point.total / maxValue).toFloat())
-                if (index == 0) linePath.moveTo(x, y) else linePath.lineTo(x, y)
+                val y = animatedY(point)
+                if (index == 0) {
+                    linePath.moveTo(x, y)
+                } else {
+                    val midX = (prevX + x) / 2f
+                    linePath.cubicTo(midX, prevY, midX, y, x, y)
+                }
+                prevX = x
+                prevY = y
             }
             val fillPath = Path().apply {
                 addPath(linePath)
