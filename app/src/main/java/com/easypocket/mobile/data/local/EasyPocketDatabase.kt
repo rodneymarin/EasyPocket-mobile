@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ShoppingListEntity::class, ShoppingListItemEntity::class,
         PurchaseHistoryEntity::class, PurchaseHistoryItemEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class EasyPocketDatabase : RoomDatabase() {
@@ -67,9 +67,44 @@ abstract class EasyPocketDatabase : RoomDatabase() {
                         "`name` TEXT NOT NULL)"
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_categories_name` ON `categories` (`name`)")
-                db.execSQL("ALTER TABLE `products` ADD COLUMN `category_id` TEXT")
-                db.execSQL("ALTER TABLE `purchase_history_items` ADD COLUMN `category_code` TEXT")
-            }
+            db.execSQL("ALTER TABLE `products` ADD COLUMN `category_id` TEXT")
+            db.execSQL("ALTER TABLE `purchase_history_items` ADD COLUMN `category_code` TEXT")
         }
     }
+
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `purchase_history_items_new` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`history_id` TEXT NOT NULL, " +
+                    "`product_name` TEXT NOT NULL, " +
+                    "`store_name` TEXT, " +
+                    "`quantity` REAL NOT NULL, " +
+                    "`unit_price` REAL NOT NULL, " +
+                    "`total_price` REAL NOT NULL, " +
+                    "`category_code` TEXT, " +
+                    "`item_uid` TEXT NOT NULL, " +
+                    "FOREIGN KEY(`history_id`) REFERENCES `purchase_history`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE)"
+            )
+            db.execSQL(
+                "INSERT INTO `purchase_history_items_new` " +
+                    "(`id`, `history_id`, `product_name`, `store_name`, `quantity`, `unit_price`, `total_price`, `category_code`, `item_uid`) " +
+                    "SELECT `id`, `history_id`, `product_name`, `store_name`, `quantity`, `unit_price`, `total_price`, `category_code`, " +
+                    "lower(hex(randomblob(16))) FROM `purchase_history_items`"
+            )
+            db.execSQL("DROP TABLE `purchase_history_items`")
+            db.execSQL("ALTER TABLE `purchase_history_items_new` RENAME TO `purchase_history_items`")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_purchase_history_items_history_id` " +
+                    "ON `purchase_history_items` (`history_id`)"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_history_items_item_uid` " +
+                    "ON `purchase_history_items` (`item_uid`)"
+            )
+        }
+    }
+}
 }

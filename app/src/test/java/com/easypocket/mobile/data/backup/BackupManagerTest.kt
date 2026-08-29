@@ -45,6 +45,7 @@ class BackupManagerTest {
                 PurchaseHistoryItemEntity(
                     historyId = id, productName = "Milk", storeName = "Store 1",
                     quantity = 2.0, unitPrice = 10.0, totalPrice = 20.0,
+                    itemUid = "uid-$id",
                 )
             )
         )
@@ -109,6 +110,53 @@ class BackupManagerTest {
     }
 
     @Test
+    fun `export and import preserve history item uids`() = runTest {
+        insertHistory("h1")
+
+        val json = manager.exportToString()
+        assertTrue(json.contains("\"itemUid\""))
+        db.clearAllTables()
+        manager.importData(manager.parse(json).getOrThrow())
+
+        val items = db.purchaseHistoryDao().observeAll().first().first().items
+        assertEquals("uid-h1", items.first().itemUid)
+    }
+
+    @Test
+    fun `import old backup without item uid generates unique uids`() = runTest {
+        val oldBackupJson = """
+            {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
+             "shoppingLists":[],"listItems":[],
+             "purchaseHistory":[{"id":"h1","listTitle":"Compras","listIcon":"$","date":1,"totalAmount":20.0,"itemCount":2}],
+             "purchaseHistoryItems":[
+               {"historyId":"h1","productName":"Milk","quantity":1.0,"unitPrice":1.0,"totalPrice":1.0},
+               {"historyId":"h1","productName":"Bread","quantity":1.0,"unitPrice":1.0,"totalPrice":1.0}]}
+        """.trimIndent()
+
+        manager.importData(manager.parse(oldBackupJson).getOrThrow())
+
+        val items = db.purchaseHistoryDao().observeAll().first().first().items
+        assertEquals(2, items.size)
+        val uids = items.map { it.itemUid }
+        assertEquals(2, uids.toSet().size)
+        assertTrue(uids.all { it.isNotBlank() })
+    }
+
+    @Test
+    fun `parse rejects duplicate item uids in backup`() {
+        val badBackupJson = """
+            {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
+             "shoppingLists":[],"listItems":[],
+             "purchaseHistory":[{"id":"h1","listTitle":"Compras","listIcon":"$","date":1,"totalAmount":2.0,"itemCount":2}],
+             "purchaseHistoryItems":[
+               {"historyId":"h1","productName":"Milk","quantity":1.0,"unitPrice":1.0,"totalPrice":1.0,"itemUid":"dup"},
+               {"historyId":"h1","productName":"Bread","quantity":1.0,"unitPrice":1.0,"totalPrice":1.0,"itemUid":"dup"}]}
+        """.trimIndent()
+
+        assertTrue(manager.parse(badBackupJson).isFailure)
+    }
+
+    @Test
     fun `parse rejects history item referencing unknown history`() {
         val badBackupJson = """
             {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
@@ -130,6 +178,7 @@ class BackupManagerTest {
                 PurchaseHistoryItemEntity(
                     historyId = "h1", productName = "Milk", storeName = null,
                     quantity = 1.0, unitPrice = 10.0, totalPrice = 10.0, categoryCode = "ABC123",
+                    itemUid = "uid-abc",
                 )
             )
         )

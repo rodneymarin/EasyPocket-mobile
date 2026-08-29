@@ -236,6 +236,54 @@ class DatabaseTest {
     }
 
     @Test
+    fun `migration 4 to 5 backfills unique item uids for existing history items`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(4) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE purchase_history (id TEXT NOT NULL PRIMARY KEY)")
+                        db.execSQL(
+                            "CREATE TABLE purchase_history_items (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "history_id TEXT NOT NULL, product_name TEXT NOT NULL, store_name TEXT, " +
+                                "quantity REAL NOT NULL, unit_price REAL NOT NULL, total_price REAL NOT NULL, " +
+                                "category_code TEXT)"
+                        )
+                        db.execSQL("INSERT INTO purchase_history (id) VALUES ('h1')")
+                        db.execSQL(
+                            "INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code) " +
+                                "VALUES ('h1', 'Milk', null, 1.0, 2.0, 2.0, 'ABC123')"
+                        )
+                        db.execSQL(
+                            "INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code) " +
+                                "VALUES ('h1', 'Bread', null, 1.0, 1.0, 1.0, null)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_4_5.migrate(db)
+
+        val uids = mutableListOf<String>()
+        db.query("SELECT product_name, item_uid, category_code FROM purchase_history_items ORDER BY id").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            do {
+                assertEquals(32, cursor.getString(1).length)
+                uids.add(cursor.getString(1))
+            } while (cursor.moveToNext())
+        }
+        assertEquals(2, uids.size)
+        assertEquals(2, uids.toSet().size)
+        helper.close()
+    }
+
+    @Test
     fun `delete history record cascades items`() = runTest {
         db.purchaseHistoryDao().insertHistory(
             PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)
@@ -245,6 +293,7 @@ class DatabaseTest {
                 PurchaseHistoryItemEntity(
                     historyId = "h1", productName = "Milk", storeName = "Store 1",
                     quantity = 2.0, unitPrice = 10.0, totalPrice = 20.0,
+                    itemUid = "uid-h1-1",
                 )
             )
         )

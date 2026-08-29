@@ -88,7 +88,7 @@ data class PurchaseHistoryEntity(
         ForeignKey(entity = PurchaseHistoryEntity::class, parentColumns = ["id"],
             childColumns = ["history_id"], onDelete = ForeignKey.CASCADE),
     ],
-    indices = [Index("history_id")],
+    indices = [Index("history_id"), Index(value = ["item_uid"], unique = true)],
 )
 data class PurchaseHistoryItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -99,4 +99,5 @@ data class PurchaseHistoryItemEntity(
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "total_price") val totalPrice: Double,
     @ColumnInfo(name = "category_code") val categoryCode: String? = null,
+    @ColumnInfo(name = "item_uid") val itemUid: String,
 )

@@ -53,6 +53,7 @@ class PurchaseHistoryRepository @Inject constructor(
                     unitPrice = unitPrice,
                     totalPrice = unitPrice * item.quantity,
                     categoryCode = products[item.productId]?.categoryId,
+                    itemUid = UUID.randomUUID().toString(),
                 )
             }
             val history = PurchaseHistoryEntity(

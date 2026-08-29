@@ -107,6 +107,7 @@ class CategoryRepositoryTest {
                 PurchaseHistoryItemEntity(
                     historyId = "h1", productName = "Arroz", storeName = null,
                     quantity = 1.0, unitPrice = 10.0, totalPrice = 10.0, categoryCode = cat.id,
+                    itemUid = "uid-1",
                 )
             )
         )

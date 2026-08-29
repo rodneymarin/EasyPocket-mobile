@@ -81,4 +81,5 @@ data class BackupPurchaseHistoryItem(
     val unitPrice: Double,
     val totalPrice: Double,
     val categoryCode: String? = null,
+    val itemUid: String? = null,
 )

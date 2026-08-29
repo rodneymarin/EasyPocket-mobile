@@ -14,6 +14,7 @@ import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.StoreEntity
 import com.easypocket.mobile.domain.UnitOfMeasurement
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -53,7 +54,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                 h.items.map { i ->
                     BackupPurchaseHistoryItem(
                         h.record.id, i.productName, i.storeName,
-                        i.quantity, i.unitPrice, i.totalPrice, i.categoryCode,
+                        i.quantity, i.unitPrice, i.totalPrice, i.categoryCode, i.itemUid,
                     )
                 }
             },
@@ -123,6 +124,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                         unitPrice = i.unitPrice,
                         totalPrice = i.totalPrice,
                         categoryCode = i.categoryCode,
+                        itemUid = i.itemUid?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
                     )
                 })
             }
@@ -158,5 +160,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
         backup.purchaseHistoryItems.forEach { item ->
             require(item.historyId in historyIds) { "History item references unknown history: ${item.historyId}" }
         }
+        val itemUids = backup.purchaseHistoryItems.mapNotNull { it.itemUid }
+        require(itemUids.size == itemUids.toSet().size) { "Duplicate history item uids in backup" }
     }
 }
