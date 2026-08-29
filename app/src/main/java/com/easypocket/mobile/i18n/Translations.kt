@@ -14,6 +14,7 @@ val englishStrings: Map<String, String> = mapOf(
     "tab.lists" to "Lists",
     "tab.products" to "Products",
     "tab.stores" to "Stores",
+    "tab.history" to "History",
     "common.loading" to "Loading...",
     "common.noResults" to "No results found",
     "common.selected" to "selected",
@@ -193,12 +194,21 @@ val englishStrings: Map<String, String> = mapOf(
     "backup.importWarning.message" to "This will replace all your current data with the backup contents. This action cannot be undone.",
     "about.developedBy" to "Developed by Rodney Marín",
     "about.version" to "Version",
+    "history.empty" to "No purchases recorded yet",
+    "history.range.7" to "7 days",
+    "history.range.30" to "30 days",
+    "history.range.90" to "90 days",
+    "history.range.all" to "All",
+    "history.showingCount" to "{count} purchases",
+    "history.total" to "Total",
+    "history.itemsCount" to "{count} items",
 )
 
 val spanishStrings: Map<String, String> = mapOf(
     "tab.lists" to "Listas",
     "tab.products" to "Productos",
     "tab.stores" to "Tiendas",
+    "tab.history" to "Historial",
     "common.loading" to "Cargando...",
     "common.noResults" to "No se encontraron resultados",
     "common.selected" to "seleccionados",
@@ -378,6 +388,14 @@ val spanishStrings: Map<String, String> = mapOf(
     "backup.importWarning.message" to "Esto reemplazará todos tus datos actuales con el contenido del respaldo. Esta acción no se puede deshacer.",
     "about.developedBy" to "Desarrollado por Rodney Marín",
     "about.version" to "Versión",
+    "history.empty" to "Aún no hay compras registradas",
+    "history.range.7" to "7 días",
+    "history.range.30" to "30 días",
+    "history.range.90" to "90 días",
+    "history.range.all" to "Todo",
+    "history.showingCount" to "{count} compras",
+    "history.total" to "Total",
+    "history.itemsCount" to "{count} items",
 )
 
 fun t(key: String, language: Language, params: Map<String, String> = emptyMap()): String {
