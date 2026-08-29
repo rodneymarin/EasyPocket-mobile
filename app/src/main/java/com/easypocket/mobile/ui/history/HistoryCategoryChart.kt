@@ -34,7 +34,7 @@ import kotlin.math.sin
 
 private const val SWEEP_DURATION_MS = 500
 private const val START_ANGLE = -90f
-private const val MIN_LABEL_SPACING_DP = 26f
+private const val MIN_LABEL_SPACING_DP = 30f
 
 private val CategoryPalette = listOf(
     0xFF1E88E5.toInt(), // azul
@@ -110,10 +110,10 @@ private fun CategoryDonut(
     Canvas(modifier) {
         val centerX = size.width / 2f
         val centerY = size.height / 2f
-        val labelMargin = 62.dp.toPx()
+        val labelMargin = 58.dp.toPx()
         val radius = min(size.width, size.height) / 2f - labelMargin
-        val stroke = 26.dp.toPx()
-        val elbowLength = 10.dp.toPx()
+        val stroke = 36.dp.toPx()
+        val elbowLength = 22.dp.toPx()
 
         val namePaint = android.graphics.Paint().apply {
             isAntiAlias = true
@@ -189,7 +189,7 @@ private fun CategoryDonut(
                 val alignRight = !isRight
                 namePaint.textAlign = if (alignRight) android.graphics.Paint.Align.RIGHT else android.graphics.Paint.Align.LEFT
                 amountPaint.textAlign = namePaint.textAlign
-                val textX = endX + (if (isRight) 6.dp.toPx() else -6.dp.toPx())
+                val textX = endX + (if (isRight) 8.dp.toPx() else -8.dp.toPx())
                 val maxWidth = (if (isRight) size.width - textX - 8.dp.toPx() else textX - 8.dp.toPx()).coerceAtLeast(1f)
 
                 val ellipsized = TextUtils.ellipsize(geom.label, android.text.TextPaint(namePaint), maxWidth, TextUtils.TruncateAt.END).toString()

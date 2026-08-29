@@ -6,6 +6,7 @@ import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HistoryMathTest {
@@ -56,6 +57,35 @@ class HistoryMathTest {
         assertEquals(LocalDate.of(2026, 8, 1), points.first().date)
         assertEquals(30.0, points.first().total, 0.001)
         assertEquals(50.0, points.last().total, 0.001)
+    }
+
+    @Test
+    fun `dailyTotals samples at most 7 equidistant key points for long ranges`() {
+        val records = listOf(
+            entity("2026-08-01", 10.0),
+            entity("2026-08-15", 20.0),
+            entity("2026-08-27", 40.0), // último día del rango de 30
+            entity("2026-08-16", 5.0),
+        )
+
+        val points = HistoryMath.dailyTotals(records, 30, today)
+
+        assertEquals(7, points.size)
+        assertEquals(LocalDate.of(2026, 7, 29), points.first().date) // inicio de la ventana de 30 días
+        assertEquals(LocalDate.of(2026, 8, 27), points.last().date)
+        assertEquals(0.0, points.first().total, 0.001)
+        assertEquals(40.0, points.last().total, 0.001)
+        val gaps = points.zipWithNext().map { (a, b) -> b.date.toEpochDay() - a.date.toEpochDay() }
+        assertEquals(setOf(4L, 5L), gaps.toSet())
+    }
+
+    @Test
+    fun `dailyTotals keeps every day for a 7 day range`() {
+        val records = listOf(entity("2026-08-27", 10.0))
+
+        val points = HistoryMath.dailyTotals(records, 7, today)
+
+        assertEquals(7, points.size)
     }
 
     @Test
