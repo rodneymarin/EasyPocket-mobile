@@ -274,7 +274,7 @@ private fun ListCardContent(
                     size = TagSize.SM,
                 )
                 Tag(
-                    text = t("list.total", language, mapOf("amount" to formatAmount(card.total))),
+                    text = t("list.total", language, mapOf("amount" to "$" + formatAmount(card.total))),
                     size = TagSize.SM,
                 )
             }
