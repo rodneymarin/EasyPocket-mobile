@@ -15,6 +15,7 @@ import com.easypocket.mobile.ui.history.HistoryScreen
 import com.easypocket.mobile.ui.lists.ListsScreen
 import com.easypocket.mobile.ui.products.ProductsScreen
 import com.easypocket.mobile.ui.stores.StoresScreen
+import kotlinx.coroutines.flow.drop
 
 private const val PAGE_COUNT = 4
 
@@ -31,7 +32,7 @@ fun HomePagerScreen(
     val pagerState = rememberPagerState(initialPage = selectedPage, pageCount = { PAGE_COUNT })
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { onPageChanged(it) }
+        snapshotFlow { pagerState.settledPage }.drop(1).collect { onPageChanged(it) }
     }
 
     LaunchedEffect(selectedPage) {
