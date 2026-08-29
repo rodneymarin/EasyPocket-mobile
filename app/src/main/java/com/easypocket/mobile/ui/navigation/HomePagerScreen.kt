@@ -31,7 +31,7 @@ fun HomePagerScreen(
     val pagerState = rememberPagerState(initialPage = selectedPage, pageCount = { PAGE_COUNT })
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { onPageChanged(it) }
+        snapshotFlow { pagerState.settledPage }.collect { onPageChanged(it) }
     }
 
     LaunchedEffect(selectedPage) {
