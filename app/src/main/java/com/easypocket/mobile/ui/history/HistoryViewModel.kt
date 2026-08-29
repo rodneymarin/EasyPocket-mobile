@@ -30,6 +30,20 @@ data class HistoryUiState(
     val grandTotal: Double
         get() = grandTotalOf(LocalDate.now())
 
+    val categorySlices: List<HistoryCategorySlice>
+        get() {
+            val totals = HistoryMath.categoryTotals(records, rangeDays, LocalDate.now())
+            return totals.entries
+                .map { (code, total) ->
+                    HistoryCategorySlice(
+                        categoryId = code,
+                        name = code?.let { c -> categories.firstOrNull { it.id == c }?.name },
+                        total = total,
+                    )
+                }
+                .sortedByDescending { it.total }
+        }
+
     fun filteredRecordsOf(today: LocalDate): List<PurchaseHistoryWithItems> =
         records.filter { HistoryMath.isInRange(it.record, rangeDays, today) }
 

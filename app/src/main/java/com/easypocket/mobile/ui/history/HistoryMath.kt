@@ -1,11 +1,18 @@
 package com.easypocket.mobile.ui.history
 
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 data class HistoryChartPoint(val date: LocalDate, val total: Double)
+
+data class HistoryCategorySlice(
+    val categoryId: String?,
+    val name: String?,
+    val total: Double,
+)
 
 object HistoryMath {
 
@@ -45,4 +52,14 @@ object HistoryMath {
         }
         return days.map { HistoryChartPoint(it, byDay[it] ?: 0.0) }
     }
+
+    fun categoryTotals(
+        records: List<PurchaseHistoryWithItems>,
+        rangeDays: Int?,
+        today: LocalDate,
+    ): Map<String?, Double> =
+        records.filter { isInRange(it.record, rangeDays, today) }
+            .flatMap { it.items }
+            .groupBy { it.categoryCode }
+            .mapValues { (_, items) -> items.sumOf { it.totalPrice } }
 }

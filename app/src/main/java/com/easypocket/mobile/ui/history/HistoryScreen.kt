@@ -95,6 +95,9 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
                         points = uiState.chartPoints,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                    HistoryCategoryChart(
+                        slices = uiState.categorySlices,
+                    )
                     RecordsList(
                         records = uiState.filteredRecords,
                         language = language,
