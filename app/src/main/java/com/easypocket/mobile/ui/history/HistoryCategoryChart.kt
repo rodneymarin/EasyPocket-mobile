@@ -28,9 +28,12 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 private const val SWEEP_DURATION_MS = 500
 private const val START_ANGLE = -90f
@@ -182,9 +185,21 @@ private fun CategoryDonut(
 
             side.forEachIndexed { i, geom ->
                 val y = ys[i]
-                val endX = geom.elbowX + (if (isRight) elbowLength else -elbowLength)
-                drawLine(lineColor, geom.anchor, Offset(geom.elbowX, y), strokeWidth = 1.5.dp.toPx())
-                drawLine(lineColor, Offset(geom.elbowX, y), Offset(endX, y), strokeWidth = 1.5.dp.toPx())
+                // La línea horizontal debe empezar mas alla del borde del anillo a esa altura:
+                // halfChord = semicuerda del circulo (radius + clearance) en la coordenada y de la etiqueta.
+                val dy = y - centerY
+                val clearRadius = radius + 6.dp.toPx()
+                val halfChord = if (abs(dy) < clearRadius) sqrt(clearRadius * clearRadius - dy * dy) else 0f
+                val clearX = if (isRight) {
+                    centerX + halfChord + 12.dp.toPx()
+                } else {
+                    centerX - halfChord - 12.dp.toPx()
+                }
+                val endX = if (isRight) max(geom.elbowX, clearX) else min(geom.elbowX, clearX)
+                val elbowX = endX + (if (isRight) -elbowLength else elbowLength)
+
+                drawLine(lineColor, geom.anchor, Offset(elbowX, y), strokeWidth = 1.5.dp.toPx())
+                drawLine(lineColor, Offset(elbowX, y), Offset(endX, y), strokeWidth = 1.5.dp.toPx())
 
                 val alignRight = !isRight
                 namePaint.textAlign = if (alignRight) android.graphics.Paint.Align.RIGHT else android.graphics.Paint.Align.LEFT
