@@ -11,6 +11,8 @@ data class BackupData(
     val prices: List<BackupPrice>,
     val shoppingLists: List<BackupList>,
     val listItems: List<BackupListItem>,
+    val purchaseHistory: List<BackupPurchaseHistory> = emptyList(),
+    val purchaseHistoryItems: List<BackupPurchaseHistoryItem> = emptyList(),
 )
 
 @Serializable
@@ -50,4 +52,24 @@ data class BackupListItem(
     val quantity: Double,
     val done: Boolean = false,
     val pinned: Boolean = false,
+)
+
+@Serializable
+data class BackupPurchaseHistory(
+    val id: String,
+    val listTitle: String,
+    val listIcon: String = "$",
+    val date: Long,
+    val totalAmount: Double,
+    val itemCount: Int,
+)
+
+@Serializable
+data class BackupPurchaseHistoryItem(
+    val historyId: String,
+    val productName: String,
+    val storeName: String? = null,
+    val quantity: Double,
+    val unitPrice: Double,
+    val totalPrice: Double,
 )

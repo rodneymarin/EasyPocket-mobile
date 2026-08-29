@@ -6,6 +6,8 @@ import androidx.room.withTransaction
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.StoreEntity
@@ -29,6 +31,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
         val products = db.productDao().getAll().first()
         val prices = db.priceDao().getAll().first()
         val lists = db.listDao().getAll().first()
+        val history = db.purchaseHistoryDao().observeAll().first()
         val backup = BackupData(
             version = SUPPORTED_VERSION,
             exportedAt = Instant.now().toString(),
@@ -39,6 +42,18 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             listItems = lists.flatMap { it.items.map { i ->
                 BackupListItem(i.id, i.shoppingListId, i.productId, i.storeId, i.quantity, i.done, i.pinned)
             } },
+            purchaseHistory = history.map { BackupPurchaseHistory(
+                it.record.id, it.record.listTitle, it.record.listIcon,
+                it.record.date, it.record.totalAmount, it.record.itemCount,
+            ) },
+            purchaseHistoryItems = history.flatMap { h ->
+                h.items.map { i ->
+                    BackupPurchaseHistoryItem(
+                        h.record.id, i.productName, i.storeName,
+                        i.quantity, i.unitPrice, i.totalPrice,
+                    )
+                }
+            },
         )
         return json.encodeToString(BackupData.serializer(), backup)
     }
@@ -89,6 +104,23 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                     )
                 )
             }
+            backup.purchaseHistory.forEach { h ->
+                db.purchaseHistoryDao().insertHistory(
+                    PurchaseHistoryEntity(h.id, h.listTitle, h.listIcon, h.date, h.totalAmount, h.itemCount)
+                )
+            }
+            if (backup.purchaseHistoryItems.isNotEmpty()) {
+                db.purchaseHistoryDao().insertItems(backup.purchaseHistoryItems.map { i ->
+                    PurchaseHistoryItemEntity(
+                        historyId = i.historyId,
+                        productName = i.productName,
+                        storeName = i.storeName,
+                        quantity = i.quantity,
+                        unitPrice = i.unitPrice,
+                        totalPrice = i.totalPrice,
+                    )
+                })
+            }
         }
     }
 
@@ -115,6 +147,11 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             require(item.shoppingListId in listIds) { "List item references unknown list: ${item.shoppingListId}" }
             require(item.productId in productIds) { "List item references unknown product: ${item.productId}" }
             require(item.storeId == null || item.storeId in storeIds) { "List item references unknown store: ${item.storeId}" }
+        }
+        val historyIds = backup.purchaseHistory.map { it.id }
+        require(historyIds.size == historyIds.toSet().size) { "Duplicate history ids in backup" }
+        backup.purchaseHistoryItems.forEach { item ->
+            require(item.historyId in historyIds) { "History item references unknown history: ${item.historyId}" }
         }
     }
 }
