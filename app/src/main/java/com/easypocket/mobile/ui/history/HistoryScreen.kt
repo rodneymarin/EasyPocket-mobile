@@ -81,6 +81,20 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
             }
             else -> {
                 RangeChips(selected = uiState.rangeDays, onSelect = { vm.setRange(it) })
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(t("history.total", language), color = appColors.textSecondary, fontSize = 14.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "$${formatAmount(uiState.grandTotal)}",
+                        color = appColors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
                 if (uiState.filteredRecords.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text(

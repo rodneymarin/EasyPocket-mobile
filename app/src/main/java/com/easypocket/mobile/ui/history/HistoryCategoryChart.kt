@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -24,7 +22,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.i18n.LocalLanguage
@@ -74,7 +71,6 @@ fun HistoryCategoryChart(slices: List<HistoryCategorySlice>, modifier: Modifier 
             .fillMaxWidth()
             .height(300.dp)
             .padding(horizontal = 0.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center,
     ) {
         CategoryDonut(
             slices = slices,
@@ -86,12 +82,6 @@ fun HistoryCategoryChart(slices: List<HistoryCategorySlice>, modifier: Modifier 
             amountColor = appColors.textSecondary,
             noCategoryLabel = noCategoryLabel,
             modifier = Modifier.fillMaxSize(),
-        )
-        Text(
-            text = "$${String.format(Locale.US, "%.2f", grandTotal)}",
-            color = appColors.text,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -122,7 +112,7 @@ private fun CategoryDonut(
         val centerY = size.height / 2f
         val labelMargin = 62.dp.toPx()
         val radius = min(size.width, size.height) / 2f - labelMargin
-        val stroke = 18.dp.toPx()
+        val stroke = 26.dp.toPx()
         val elbowLength = 10.dp.toPx()
 
         val namePaint = android.graphics.Paint().apply {
