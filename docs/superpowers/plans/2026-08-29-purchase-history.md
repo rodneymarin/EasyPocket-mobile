@@ -749,6 +749,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.util.MainDispatcherRule
 import java.time.LocalDate
@@ -810,27 +811,24 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun `uiState filters records by range and computes chart points`() = runTest {
-        val vm = createVm()
-        advanceUntilIdle()
-        db.purchaseHistoryDao().insertHistory(entity("2026-08-27", 50.0))
-        db.purchaseHistoryDao().insertHistory(entity("2026-08-01", 30.0))
-        advanceUntilIdle()
-
-        val today = LocalDate.of(2026, 8, 27)
-        val state = vm.uiState.value
-        val recent = HistoryMath.filterRecords(
-            state.records.map { it.record }, 7, today
+    fun `uiState filters records by range and computes chart points`() {
+        val records = listOf(
+            PurchaseHistoryWithItems(entity("2026-08-27", 50.0), emptyList()),
+            PurchaseHistoryWithItems(entity("2026-08-01", 30.0), emptyList()),
         )
-        assertEquals(1, recent.size)
+        val today = LocalDate.of(2026, 8, 27)
+        val state = HistoryUiState(records = records, rangeDays = 7, isLoading = false)
+
+        assertEquals(1, state.filteredRecordsOf(today).size)
         assertEquals(7, state.chartPointsOf(today, 7).size)
         assertEquals(50.0, state.chartPointsOf(today, 7).last().total, 0.001)
+        assertEquals(2, state.chartPointsOf(today, null).size)
         assertEquals(50.0, state.grandTotalOf(today), 0.001)
     }
 }
 ```
 
-Nota: el último test llama helpers que se agregan a `HistoryUiState` para poder pasar `today` inyectado (el estado usa `LocalDate.now()` por defecto). Agregar esos helpers al UiState en el Step 3: `chartPointsOf(today, rangeDays)` y `grandTotalOf(today)` delegan en `HistoryMath` con el `rangeDays` del estado.
+Nota: el segundo test es puro (sin Room ni Flows) y usa helpers que inyectan `today`, que se agregan al `HistoryUiState` en el Step 3.
 
 - [ ] **Step 2: Verificar que los tests fallan (compilación)**
 
@@ -860,16 +858,17 @@ data class HistoryUiState(
     val rangeDays: Int? = 7,
     val isLoading: Boolean = true,
 ) {
-    private val today: LocalDate = LocalDate.now()
-
     val filteredRecords: List<PurchaseHistoryWithItems>
-        get() = records.filter { HistoryMath.isInRange(it.record, rangeDays, today) }
+        get() = filteredRecordsOf(LocalDate.now())
 
     val chartPoints: List<HistoryChartPoint>
-        get() = HistoryMath.dailyTotals(records.map { it.record }, rangeDays, today)
+        get() = chartPointsOf(LocalDate.now(), rangeDays)
 
     val grandTotal: Double
-        get() = filteredRecords.sumOf { it.record.totalAmount }
+        get() = grandTotalOf(LocalDate.now())
+
+    fun filteredRecordsOf(today: LocalDate): List<PurchaseHistoryWithItems> =
+        records.filter { HistoryMath.isInRange(it.record, rangeDays, today) }
 
     fun chartPointsOf(today: LocalDate, rangeDays: Int?): List<HistoryChartPoint> =
         HistoryMath.dailyTotals(records.map { it.record }, rangeDays, today)
