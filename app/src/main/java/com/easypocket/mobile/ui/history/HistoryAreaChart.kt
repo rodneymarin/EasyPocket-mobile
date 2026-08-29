@@ -28,7 +28,7 @@ import java.util.Locale
 
 private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("dd/MM")
 
-private const val RISE_DURATION_MS = 600
+private const val RISE_DURATION_MS = 350
 
 @Composable
 fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modifier) {
