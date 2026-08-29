@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.repository.ProductRepository
+import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
@@ -44,7 +45,19 @@ class ListDetailViewModelTest {
         productsRepository = ProductRepository(db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
         Seeder(db).seedIfEmpty()
-        return ListDetailViewModel(listsRepository, storesRepository, productsRepository)
+        return ListDetailViewModel(
+            listsRepository,
+            storesRepository,
+            productsRepository,
+            PurchaseHistoryRepository(
+                db = db,
+                historyDao = db.purchaseHistoryDao(),
+                listDao = db.listDao(),
+                productDao = db.productDao(),
+                priceDao = db.priceDao(),
+                storeDao = db.storeDao(),
+            ),
+        )
     }
 
     @Test
