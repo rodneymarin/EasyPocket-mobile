@@ -106,3 +106,16 @@ interface ShoppingListDao {
     @Query("UPDATE shopping_list_items SET done = 0 WHERE shopping_list_id = :listId AND done = 1")
     suspend fun uncheckAll(listId: String)
 }
+
+@Dao
+interface PurchaseHistoryDao {
+    @Transaction
+    @Query("SELECT * FROM purchase_history ORDER BY date DESC")
+    fun observeAll(): Flow<List<PurchaseHistoryWithItems>>
+
+    @Insert
+    suspend fun insertHistory(history: PurchaseHistoryEntity)
+
+    @Insert
+    suspend fun insertItems(items: List<PurchaseHistoryItemEntity>)
+}

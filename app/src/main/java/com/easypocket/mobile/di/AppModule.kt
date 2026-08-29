@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.ProductDao
+import com.easypocket.mobile.data.local.PurchaseHistoryDao
 import com.easypocket.mobile.data.local.ShoppingListDao
 import com.easypocket.mobile.data.local.StoreDao
 import com.easypocket.mobile.settings.SettingsRepository
@@ -23,7 +24,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): EasyPocketDatabase =
         Room.databaseBuilder(context, EasyPocketDatabase::class.java, "easypocket.db")
-            .addMigrations(EasyPocketDatabase.MIGRATION_1_2)
+            .addMigrations(EasyPocketDatabase.MIGRATION_1_2, EasyPocketDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
 
@@ -38,6 +39,9 @@ object AppModule {
 
     @Provides
     fun provideListDao(db: EasyPocketDatabase): ShoppingListDao = db.listDao()
+
+    @Provides
+    fun providePurchaseHistoryDao(db: EasyPocketDatabase): PurchaseHistoryDao = db.purchaseHistoryDao()
 
     @Provides
     @Singleton

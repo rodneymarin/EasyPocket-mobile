@@ -8,3 +8,9 @@ data class ShoppingListWithItems(
     @Relation(parentColumn = "id", entityColumn = "shopping_list_id")
     val items: List<ShoppingListItemEntity>,
 )
+
+data class PurchaseHistoryWithItems(
+    @Embedded val record: PurchaseHistoryEntity,
+    @Relation(parentColumn = "id", entityColumn = "history_id")
+    val items: List<PurchaseHistoryItemEntity>,
+)

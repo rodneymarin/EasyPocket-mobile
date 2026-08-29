@@ -130,4 +130,54 @@ class DatabaseTest {
 
         assertEquals(1, db.listDao().getById("l1")!!.items.size)
     }
+
+    @Test
+    fun `migration 2 to 3 creates history tables`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(2) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {}
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_2_3.migrate(db)
+
+        db.execSQL(
+            "INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) " +
+                "VALUES ('h1', 'Lista', '$', 0, 20.0, 2)"
+        )
+        db.execSQL(
+            "INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price) " +
+                "VALUES ('h1', 'Milk', 'Store 1', 2.0, 10.0, 20.0)"
+        )
+        db.query("SELECT list_title FROM purchase_history WHERE id = 'h1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Lista", cursor.getString(0))
+        }
+        helper.close()
+    }
+
+    @Test
+    fun `delete history record cascades items`() = runTest {
+        db.purchaseHistoryDao().insertHistory(
+            PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)
+        )
+        db.purchaseHistoryDao().insertItems(
+            listOf(
+                PurchaseHistoryItemEntity(
+                    historyId = "h1", productName = "Milk", storeName = "Store 1",
+                    quantity = 2.0, unitPrice = 10.0, totalPrice = 20.0,
+                )
+            )
+        )
+
+        db.openHelper.writableDatabase.execSQL("DELETE FROM purchase_history WHERE id = 'h1'")
+
+        assertTrue(db.purchaseHistoryDao().observeAll().first().isEmpty())
+    }
 }

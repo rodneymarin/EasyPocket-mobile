@@ -64,3 +64,31 @@ data class ShoppingListItemEntity(
     val done: Boolean = false,
     val pinned: Boolean = false,
 )
+
+@Entity(tableName = "purchase_history")
+data class PurchaseHistoryEntity(
+    @PrimaryKey val id: String,
+    @ColumnInfo(name = "list_title") val listTitle: String,
+    @ColumnInfo(name = "list_icon") val listIcon: String,
+    val date: Long,
+    @ColumnInfo(name = "total_amount") val totalAmount: Double,
+    @ColumnInfo(name = "item_count") val itemCount: Int,
+)
+
+@Entity(
+    tableName = "purchase_history_items",
+    foreignKeys = [
+        ForeignKey(entity = PurchaseHistoryEntity::class, parentColumns = ["id"],
+            childColumns = ["history_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("history_id")],
+)
+data class PurchaseHistoryItemEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "history_id") val historyId: String,
+    @ColumnInfo(name = "product_name") val productName: String,
+    @ColumnInfo(name = "store_name") val storeName: String?,
+    val quantity: Double,
+    @ColumnInfo(name = "unit_price") val unitPrice: Double,
+    @ColumnInfo(name = "total_price") val totalPrice: Double,
+)
