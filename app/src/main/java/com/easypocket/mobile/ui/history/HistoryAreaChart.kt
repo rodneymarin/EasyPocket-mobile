@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -56,20 +57,19 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                 val target = size.height * (1f - (point.total / maxValue).toFloat())
                 return size.height + (target - size.height) * progress
             }
-            val linePath = Path()
-            var prevX = 0f
-            var prevY = 0f
-            points.forEachIndexed { index, point ->
+            val positions = points.mapIndexed { index, point ->
                 val x = if (points.size == 1) size.width / 2f else index * size.width / (points.size - 1)
-                val y = animatedY(point)
+                Offset(x, animatedY(point))
+            }
+            val linePath = Path()
+            positions.forEachIndexed { index, position ->
                 if (index == 0) {
-                    linePath.moveTo(x, y)
+                    linePath.moveTo(position.x, position.y)
                 } else {
-                    val midX = (prevX + x) / 2f
-                    linePath.cubicTo(midX, prevY, midX, y, x, y)
+                    val prev = positions[index - 1]
+                    val midX = (prev.x + position.x) / 2f
+                    linePath.cubicTo(midX, prev.y, midX, position.y, position.x, position.y)
                 }
-                prevX = x
-                prevY = y
             }
             val fillPath = Path().apply {
                 addPath(linePath)
@@ -84,6 +84,10 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                 ),
             )
             drawPath(linePath, color = appColors.primary, style = Stroke(width = 2.dp.toPx()))
+            positions.forEach { position ->
+                drawCircle(color = appColors.background, radius = 4.dp.toPx(), center = position)
+                drawCircle(color = appColors.primary, radius = 3.dp.toPx(), center = position)
+            }
         }
         Row(Modifier.fillMaxWidth()) {
             Text(
