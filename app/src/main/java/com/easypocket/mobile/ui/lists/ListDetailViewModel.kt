@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.easypocket.mobile.data.repository.ProductRepository
+import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.ListLogic
@@ -73,6 +74,7 @@ class ListDetailViewModel @Inject constructor(
     private val listsRepository: ShoppingListRepository,
     private val storesRepository: StoreRepository,
     private val productsRepository: ProductRepository,
+    private val historyRepository: PurchaseHistoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ListDetailUiState())
@@ -133,6 +135,15 @@ class ListDetailViewModel @Inject constructor(
         if (doneIds.isEmpty()) return
         _uiState.value = _uiState.value.copy(list = current.copy(items = current.items.filter { !it.done }))
         listsRepository.removeItems(doneIds)
+        resetFilterIfEmpty()
+    }
+
+    suspend fun archiveCompleted() {
+        val current = _uiState.value.list ?: return
+        val doneIds = current.items.filter { it.done }.map { it.id }
+        if (doneIds.isEmpty()) return
+        historyRepository.archiveCompleted(current.id)
+        _uiState.value = _uiState.value.copy(list = current.copy(items = current.items.filter { !it.done }))
         resetFilterIfEmpty()
     }
 

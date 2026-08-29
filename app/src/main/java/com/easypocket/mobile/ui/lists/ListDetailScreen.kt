@@ -97,6 +97,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var renameInput by remember { mutableStateOf("") }
     var renameIcon by remember { mutableStateOf("") }
     var showRemoveCompleted by rememberSaveable { mutableStateOf(false) }
+    var showArchive by rememberSaveable { mutableStateOf(false) }
     var showDeleteSelected by rememberSaveable { mutableStateOf(false) }
     var showMove by rememberSaveable { mutableStateOf(false) }
     var moveLists by remember { mutableStateOf(listOf<ShoppingList>()) }
@@ -175,6 +176,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         }
                     },
                     onRemoveCompleted = { showRemoveCompleted = true },
+                    onArchive = { showArchive = true },
                     onSelectStore = { vm.setStoreFilter(it) },
                     onCloseSelection = { vm.clearSelection() },
                     onMove = {
@@ -259,6 +261,21 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     )
 
     ConfirmSheet(
+        visible = showArchive,
+        title = t("listDetail.archiveToHistory", language),
+        message = t("listDetail.archiveConfirmMessage", language),
+        confirmLabel = t("listDetail.archiveConfirm", language),
+        onConfirm = {
+            scope.launch {
+                vm.archiveCompleted()
+                showArchive = false
+                toast.show(t("toast.listArchived", language), ToastType.SUCCESS)
+            }
+        },
+        onDismiss = { showArchive = false },
+    )
+
+    ConfirmSheet(
         visible = showDeleteSelected,
         title = t("listDetail.confirmDeleteSelected", language),
         message = t("listDetail.confirmDeleteSelectedMessage", language, mapOf("count" to uiState.selection.size.toString())),
@@ -322,6 +339,7 @@ private fun ActionBar(
     onCopy: () -> Unit,
     onUncheckAll: () -> Unit,
     onRemoveCompleted: () -> Unit,
+    onArchive: () -> Unit,
     onSelectStore: (String?) -> Unit,
     onCloseSelection: () -> Unit,
     onMove: () -> Unit,
@@ -387,6 +405,14 @@ private fun ActionBar(
                         onClick = {
                             onDismissMenu()
                             onRemoveCompleted()
+                        },
+                        enabled = uiState.hasDoneItems,
+                    )
+                    DropdownItem(
+                        label = t("listDetail.archiveToHistory", language),
+                        onClick = {
+                            onDismissMenu()
+                            onArchive()
                         },
                         enabled = uiState.hasDoneItems,
                     )
