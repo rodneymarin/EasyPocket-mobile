@@ -44,7 +44,6 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 seeder.seedIfEmpty()
-                seeder.seedFakeHistory()
                 _isReady.value = true
             } catch (t: Throwable) { _fatalError.value = t }
         }
