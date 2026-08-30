@@ -1,5 +1,6 @@
 package com.easypocket.mobile.ui.lists
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
@@ -68,6 +70,7 @@ import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.DropdownItem
 import com.easypocket.mobile.ui.components.DropdownMenu
 import com.easypocket.mobile.ui.components.FormTextField
+import com.easypocket.mobile.ui.components.HeaderIconButton
 import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.AppItemList
@@ -104,6 +107,8 @@ fun ListDetailScreen(navController: NavController, listId: String) {
 
     LaunchedEffect(listId) { vm.load(listId) }
 
+    BackHandler(enabled = uiState.isSelectionMode) { vm.clearSelection() }
+
     fun enterSelection(itemId: Long) {
         vm.setSelection(setOf(itemId))
         scope.launch { moveLists = vm.moveTargetLists() }
@@ -125,11 +130,19 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                 else -> t("common.error", language)
             },
             onBack = { if (uiState.isSelectionMode) vm.clearSelection() else onBack() },
-            onTitleClick = if (uiState.isSelectionMode) null else {
+            trailing = if (uiState.isSelectionMode || currentList == null) {
+                null
+            } else {
                 {
-                    renameInput = uiState.list?.title ?: ""
-                    renameIcon = uiState.list?.icon ?: ""
-                    showRename = true
+                    HeaderIconButton(
+                        icon = Icons.Filled.Edit,
+                        contentDescription = t("stores.edit", language),
+                        onClick = {
+                            renameInput = uiState.list?.title ?: ""
+                            renameIcon = uiState.list?.icon ?: ""
+                            showRename = true
+                        },
+                    )
                 }
             },
             titleContent = if (uiState.isSelectionMode) {

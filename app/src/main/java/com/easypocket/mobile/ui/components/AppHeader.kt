@@ -82,7 +82,7 @@ fun AppHeader(
 }
 
 @Composable
-private fun HeaderIconButton(
+fun HeaderIconButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
