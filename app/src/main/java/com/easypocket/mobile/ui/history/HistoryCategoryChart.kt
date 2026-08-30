@@ -1,43 +1,46 @@
 package com.easypocket.mobile.ui.history
 
-import android.graphics.Typeface
-import android.text.TextUtils
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.Insets
+import com.patrykandpatrick.vico.compose.common.component.TextComponent
+import com.patrykandpatrick.vico.compose.pie.PieChart
+import com.patrykandpatrick.vico.compose.pie.PieChartHost
+import com.patrykandpatrick.vico.compose.pie.PieSize
+import com.patrykandpatrick.vico.compose.pie.data.PieChartModelProducer
+import com.patrykandpatrick.vico.compose.pie.data.PieValueFormatter
+import com.patrykandpatrick.vico.compose.pie.data.pieModel
+import com.patrykandpatrick.vico.compose.pie.rememberPieChart
 import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sin
-import kotlin.math.sqrt
-
-private const val SWEEP_DURATION_MS = 500
-private const val START_ANGLE = -90f
-private const val MIN_LABEL_SPACING_DP = 30f
 
 private val CategoryPalette = listOf(
     0xFF1E88E5.toInt(), // azul
@@ -59,162 +62,89 @@ fun HistoryCategoryChart(slices: List<HistoryCategorySlice>, modifier: Modifier 
     val grandTotal = slices.sumOf { it.total }
     if (slices.isEmpty() || grandTotal <= 0.0) return
 
-    val sweepProgress = remember(slices) { Animatable(0f) }
-    LaunchedEffect(slices) {
-        sweepProgress.animateTo(1f, tween(durationMillis = SWEEP_DURATION_MS, easing = FastOutSlowInEasing))
-    }
-
     val colors = slices.mapIndexed { index, slice ->
         if (slice.name == null) appColors.textSecondary else Color(CategoryPalette[index % CategoryPalette.size])
     }
     val noCategoryLabel = t("history.noCategory", language)
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .padding(horizontal = 0.dp, vertical = 2.dp),
-    ) {
-        CategoryDonut(
-            slices = slices,
-            colors = colors,
-            grandTotal = grandTotal,
-            progress = sweepProgress.value,
-            lineColor = appColors.textSecondary.copy(alpha = 0.55f),
-            nameColor = appColors.text,
-            amountColor = appColors.textSecondary,
-            noCategoryLabel = noCategoryLabel,
-            modifier = Modifier.fillMaxSize(),
+    val modelProducer = remember { PieChartModelProducer() }
+    LaunchedEffect(slices) {
+        modelProducer.runTransaction {
+            pieModel { series(slices.map { it.total }) }
+        }
+    }
+
+    val sliceLabelStyle = TextStyle(color = appColors.text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    val sliceComponents = slices.mapIndexed { index, slice ->
+        PieChart.Slice(
+            fill = Fill(colors[index]),
+            label =
+                PieChart.SliceLabel.Outside(
+                    textComponent = TextComponent(textStyle = sliceLabelStyle, margins = Insets(horizontal = 4.dp)),
+                    lineColor = appColors.textSecondary.copy(alpha = 0.55f),
+                ),
         )
+    }
+
+    Column(modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        PieChartHost(
+            chart =
+                rememberPieChart(
+                    sliceProvider = PieChart.SliceProvider.series(sliceComponents),
+                    innerSize = PieSize.Inner.fixed(64.dp),
+                    spacing = 3.dp,
+                    valueFormatter =
+                        PieValueFormatter { _, value, _ ->
+                            "${(value / grandTotal * 100).toInt()}%"
+                        },
+                ),
+            modelProducer = modelProducer,
+            modifier = Modifier.fillMaxWidth().height(260.dp),
+        )
+        Legend(slices = slices, colors = colors, grandTotal = grandTotal, noCategoryLabel = noCategoryLabel)
     }
 }
 
-private class SliceGeom(
-    val color: Color,
-    val anchor: Offset,
-    val elbowX: Float,
-    val label: String,
-    val amount: String,
-    val isRight: Boolean,
-)
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CategoryDonut(
+private fun Legend(
     slices: List<HistoryCategorySlice>,
     colors: List<Color>,
     grandTotal: Double,
-    progress: Float,
-    lineColor: Color,
-    nameColor: Color,
-    amountColor: Color,
     noCategoryLabel: String,
-    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier) {
-        val centerX = size.width / 2f
-        val centerY = size.height / 2f
-        val labelMargin = 58.dp.toPx()
-        val radius = min(size.width, size.height) / 2f - labelMargin
-        val stroke = 36.dp.toPx()
-        val elbowLength = 22.dp.toPx()
-
-        val namePaint = android.graphics.Paint().apply {
-            isAntiAlias = true
-            textSize = 12.sp.toPx()
-            color = nameColor.toArgb()
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-        val amountPaint = android.graphics.Paint().apply {
-            isAntiAlias = true
-            textSize = 10.sp.toPx()
-            color = amountColor.toArgb()
-        }
-
-        val geoms = mutableListOf<SliceGeom>()
-        var startAngle = START_ANGLE
+    val appColors = LocalAppColors.current
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         slices.forEachIndexed { index, slice ->
-            val sweep = (slice.total / grandTotal * 360.0).toFloat() * progress
-            drawArc(
-                color = colors[index],
-                startAngle = startAngle,
-                sweepAngle = sweep,
-                useCenter = false,
-                topLeft = Offset(centerX - radius, centerY - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(width = stroke, cap = StrokeCap.Butt),
-            )
-
-            val midAngle = startAngle + sweep / 2f
-            val radians = Math.toRadians(midAngle.toDouble())
-            val dirX = cos(radians).toFloat()
-            val dirY = sin(radians).toFloat()
-            geoms.add(
-                SliceGeom(
-                    color = colors[index],
-                    anchor = Offset(centerX + dirX * (radius + 3.dp.toPx()), centerY + dirY * (radius + 3.dp.toPx())),
-                    elbowX = centerX + dirX * (radius + 11.dp.toPx()),
-                    label = slice.name ?: noCategoryLabel,
-                    amount = "$${String.format(Locale.US, "%.2f", slice.total)} · ${(slice.total / grandTotal * 100).toInt()}%",
-                    isRight = dirX >= 0f,
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(150.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(colors[index]),
                 )
-            )
-            startAngle += sweep
-        }
-
-        val minSpacing = MIN_LABEL_SPACING_DP.dp.toPx()
-        val maxLabelY = size.height - 14.dp.toPx()
-        val minLabelY = 18.dp.toPx()
-
-        fun drawSide(isRight: Boolean) {
-            val side = geoms.filter { it.isRight == isRight }.sortedBy { it.anchor.y }
-            if (side.isEmpty()) return
-
-            val ys = mutableListOf<Float>()
-            side.forEach { geom ->
-                var y = geom.anchor.y.coerceIn(minLabelY, maxLabelY)
-                if (ys.isNotEmpty() && y - ys.last() < minSpacing) y = ys.last() + minSpacing
-                ys.add(y)
-            }
-            val overflow = ys.last() - maxLabelY
-            if (overflow > 0f) {
-                for (i in ys.indices) ys[i] -= overflow
-                for (i in 1 until ys.size) {
-                    if (ys[i] - ys[i - 1] < minSpacing) ys[i] = ys[i - 1] + minSpacing
-                }
-            }
-
-            side.forEachIndexed { i, geom ->
-                val y = ys[i]
-                // La línea horizontal debe empezar mas alla del borde del anillo a esa altura:
-                // halfChord = semicuerda del circulo (radius + clearance) en la coordenada y de la etiqueta.
-                val dy = y - centerY
-                val clearRadius = radius + 6.dp.toPx()
-                val halfChord = if (abs(dy) < clearRadius) sqrt(clearRadius * clearRadius - dy * dy) else 0f
-                val clearX = if (isRight) {
-                    centerX + halfChord + 12.dp.toPx()
-                } else {
-                    centerX - halfChord - 12.dp.toPx()
-                }
-                val endX = if (isRight) max(geom.elbowX, clearX) else min(geom.elbowX, clearX)
-                val elbowX = endX + (if (isRight) -elbowLength else elbowLength)
-
-                drawLine(lineColor, geom.anchor, Offset(elbowX, y), strokeWidth = 1.5.dp.toPx())
-                drawLine(lineColor, Offset(elbowX, y), Offset(endX, y), strokeWidth = 1.5.dp.toPx())
-
-                val alignRight = !isRight
-                namePaint.textAlign = if (alignRight) android.graphics.Paint.Align.RIGHT else android.graphics.Paint.Align.LEFT
-                amountPaint.textAlign = namePaint.textAlign
-                val textX = endX + (if (isRight) 8.dp.toPx() else -8.dp.toPx())
-                val maxWidth = (if (isRight) size.width - textX - 8.dp.toPx() else textX - 8.dp.toPx()).coerceAtLeast(1f)
-
-                val ellipsized = TextUtils.ellipsize(geom.label, android.text.TextPaint(namePaint), maxWidth, TextUtils.TruncateAt.END).toString()
-                val native = drawContext.canvas.nativeCanvas
-                native.drawText(ellipsized, textX, y - 3.dp.toPx(), namePaint)
-                native.drawText(geom.amount, textX, y + 11.dp.toPx(), amountPaint)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = slice.name ?: noCategoryLabel,
+                    color = appColors.text,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "$${String.format(Locale.US, "%.2f", slice.total)}",
+                    color = appColors.textSecondary,
+                    fontSize = 11.sp,
+                )
             }
         }
-
-        drawSide(isRight = true)
-        drawSide(isRight = false)
     }
 }

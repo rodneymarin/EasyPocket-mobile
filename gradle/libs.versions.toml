@@ -1,22 +1,23 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
-composeBom = "2024.12.01"
-activityCompose = "1.9.3"
-coreKtx = "1.15.0"
-lifecycle = "2.8.7"
-navigationCompose = "2.8.5"
-hilt = "2.52"
-hiltNavigationCompose = "1.2.0"
-room = "2.6.1"
-datastore = "1.1.1"
-serializationJson = "1.7.3"
+agp = "9.3.2"
+kotlin = "2.4.10"
+ksp = "2.3.11"
+composeBom = "2026.08.00"
+activityCompose = "1.13.0"
+coreKtx = "1.19.0"
+lifecycle = "2.11.0"
+navigationCompose = "2.10.0"
+hilt = "2.60.1"
+hiltNavigationCompose = "1.4.0"
+room = "2.8.4"
+datastore = "1.2.1"
+serializationJson = "1.11.0"
 junit = "4.13.2"
-robolectric = "4.14.1"
-androidxTestCore = "1.6.1"
-coroutinesTest = "1.9.0"
-appcompat = "1.7.0"
+robolectric = "4.16.1"
+androidxTestCore = "1.7.0"
+coroutinesTest = "1.11.0"
+appcompat = "1.8.0"
+vico = "3.3.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,10 +47,10 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 androidx-test-core = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+vico = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
