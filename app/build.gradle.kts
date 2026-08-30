@@ -32,6 +32,16 @@ android {
     testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType == "release") {
+            variant.outputs.forEach { output ->
+                output.outputFileName.set("EasyPocket.apk")
+            }
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
