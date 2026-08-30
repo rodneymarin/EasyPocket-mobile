@@ -263,7 +263,7 @@ private fun ProductCardContent(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
         )
         if (categoryName != null) {
             Spacer(Modifier.width(6.dp))

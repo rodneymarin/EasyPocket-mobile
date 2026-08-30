@@ -1,5 +1,6 @@
 package com.easypocket.mobile.ui.stores
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -82,6 +83,8 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
     }
 
     val isSelectionMode = uiState.isSelectionMode
+
+    BackHandler(enabled = isSelectionMode) { vm.clearSelection() }
 
     Column(
         modifier = Modifier

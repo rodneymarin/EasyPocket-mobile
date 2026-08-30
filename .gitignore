@@ -10,5 +10,10 @@ captures/
 .cxx/
 
 hs_err_*.log
+replay_pid*.log
 
 app/release/
+
+*.jks
+*.keystore
+.kotlin/
