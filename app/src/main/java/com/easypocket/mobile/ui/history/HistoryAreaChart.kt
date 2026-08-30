@@ -13,11 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
@@ -102,11 +104,14 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                         HorizontalAxis.rememberBottom(
                             valueFormatter = dateFormatter,
                             itemPlacer = HorizontalAxis.ItemPlacer.aligned(shiftExtremeLabels = true),
+                            label =
+                                rememberAxisLabelComponent(
+                                    style = TextStyle(color = appColors.text, fontSize = 11.sp),
+                                ),
                             guideline =
                                 rememberAxisGuidelineComponent(
-                                    fill = Fill(appColors.textSecondary.copy(alpha = 0.4f)),
+                                    fill = Fill(appColors.textSecondary.copy(alpha = 0.5f)),
                                     thickness = 1.dp,
-                                    shape = androidx.compose.ui.graphics.RectangleShape,
                                 ),
                         ),
                 ),
