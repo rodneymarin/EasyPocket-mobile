@@ -103,7 +103,7 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                     bottomAxis =
                         HorizontalAxis.rememberBottom(
                             valueFormatter = dateFormatter,
-                            itemPlacer = HorizontalAxis.ItemPlacer.aligned(shiftExtremeLabels = true),
+                            itemPlacer = HorizontalAxis.ItemPlacer.aligned(),
                             label =
                                 rememberAxisLabelComponent(
                                     style = TextStyle(color = appColors.text, fontSize = 11.sp),

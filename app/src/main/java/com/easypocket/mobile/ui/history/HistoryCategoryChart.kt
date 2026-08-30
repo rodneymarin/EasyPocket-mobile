@@ -86,7 +86,7 @@ fun HistoryCategoryChart(slices: List<HistoryCategorySlice>, modifier: Modifier 
         )
     }
 
-    Column(modifier.fillMaxWidth().padding(top = 2.dp, bottom = 20.dp)) {
+    Column(modifier.fillMaxWidth().padding(top = 16.dp, bottom = 20.dp)) {
         PieChartHost(
             chart =
                 rememberPieChart(
