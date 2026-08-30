@@ -28,7 +28,9 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -41,17 +43,18 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
     val lineColor = appColors.primary
 
     val modelProducer = remember { CartesianChartModelProducer() }
+    val xToDateKey = remember { ExtraStore.Key<Map<Float, LocalDate>>() }
     LaunchedEffect(points) {
-        val xs = points.map { it.date.toEpochDay().toFloat() }
-        val ys = points.map { it.total.toFloat() }
+        val dates = points.mapIndexed { index, point -> index.toFloat() to point.date }.toMap()
         modelProducer.runTransaction {
-            lineModel { series(xs, ys) }
+            lineModel { series(dates.keys.toList(), points.map { it.total.toFloat() }) }
+            extras { store -> store[xToDateKey] = dates }
         }
     }
 
-    val dateFormatter = remember {
-        CartesianValueFormatter { _, value, _ ->
-            java.time.LocalDate.ofEpochDay(value.toLong()).format(DATE_LABEL_FORMAT)
+    val dateFormatter = remember(xToDateKey) {
+        CartesianValueFormatter { context, value, _ ->
+            context.model.extraStore[xToDateKey][value.toFloat()]?.format(DATE_LABEL_FORMAT) ?: ""
         }
     }
 
@@ -98,7 +101,13 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                     bottomAxis =
                         HorizontalAxis.rememberBottom(
                             valueFormatter = dateFormatter,
-                            guideline = rememberAxisGuidelineComponent(fill = Fill(appColors.border.copy(alpha = 0.7f))),
+                            itemPlacer = HorizontalAxis.ItemPlacer.aligned(shiftExtremeLabels = true),
+                            guideline =
+                                rememberAxisGuidelineComponent(
+                                    fill = Fill(appColors.textSecondary.copy(alpha = 0.4f)),
+                                    thickness = 1.dp,
+                                    shape = androidx.compose.ui.graphics.RectangleShape,
+                                ),
                         ),
                 ),
             modelProducer = modelProducer,

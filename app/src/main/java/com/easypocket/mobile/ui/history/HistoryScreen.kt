@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,8 +40,8 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppHeader
-import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ListIconCircle
+import com.easypocket.mobile.ui.components.ListItemGroup
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import java.time.Instant
@@ -80,43 +81,50 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
                 )
             }
             else -> {
-                RangeChips(selected = uiState.rangeDays, onSelect = { vm.setRange(it) })
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(t("history.total", language), color = appColors.textSecondary, fontSize = 14.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "$${formatAmount(uiState.grandTotal)}",
-                        color = appColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                if (uiState.filteredRecords.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    RangeChips(selected = uiState.rangeDays, onSelect = { vm.setRange(it) })
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(t("history.total", language), color = appColors.textSecondary, fontSize = 14.sp)
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            t("history.empty", language),
-                            color = appColors.textSecondary,
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Center,
+                            text = "$${formatAmount(uiState.grandTotal)}",
+                            color = appColors.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
-                } else {
-                    HistoryAreaChart(
-                        points = uiState.chartPoints,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                    HistoryCategoryChart(
-                        slices = uiState.categorySlices,
-                    )
-                    RecordsList(
-                        records = uiState.filteredRecords,
-                        language = language,
-                        onRecordPress = { selectedRecord = it },
-                    )
+                    if (uiState.filteredRecords.isEmpty()) {
+                        Box(Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                t("history.empty", language),
+                                color = appColors.textSecondary,
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    } else {
+                        HistoryAreaChart(
+                            points = uiState.chartPoints,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        HistoryCategoryChart(
+                            slices = uiState.categorySlices,
+                        )
+                        RecordsList(
+                            records = uiState.filteredRecords,
+                            language = language,
+                            onRecordPress = { selectedRecord = it },
+                        )
+                    }
                 }
             }
         }
@@ -174,18 +182,28 @@ private fun RecordsList(
     language: Language,
     onRecordPress: (PurchaseHistoryWithItems) -> Unit,
 ) {
-    AppItemList(
-        footerText = t("history.showingCount", language, mapOf("count" to records.size.toString())),
-    ) {
-        itemsIndexed(records, key = { _, entry -> entry.record.id }) { index, record ->
-            ListItemRow(
-                onClick = { onRecordPress(record) },
-                isFirst = index == 0,
-                isLast = index == records.lastIndex,
-            ) {
-                RecordCardContent(record = record)
+    val appColors = LocalAppColors.current
+    Column(Modifier.fillMaxWidth()) {
+        ListItemGroup(
+            modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp),
+        ) {
+            records.forEachIndexed { index, record ->
+                ListItemRow(
+                    onClick = { onRecordPress(record) },
+                    isFirst = index == 0,
+                    isLast = index == records.lastIndex,
+                ) {
+                    RecordCardContent(record = record)
+                }
             }
         }
+        Text(
+            text = t("history.showingCount", language, mapOf("count" to records.size.toString())),
+            color = appColors.textSecondary,
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        )
     }
 }
 
