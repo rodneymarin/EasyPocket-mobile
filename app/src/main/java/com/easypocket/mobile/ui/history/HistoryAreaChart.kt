@@ -32,6 +32,7 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import com.easypocket.mobile.ui.theme.LocalIsDark
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -41,8 +42,10 @@ private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("dd/MM")
 @Composable
 fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modifier) {
     val appColors = LocalAppColors.current
+    val isDark = LocalIsDark.current
     val maxValue = points.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: return
     val lineColor = appColors.primary
+    val guidelineColor = if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.10f)
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val xToDateKey = remember { ExtraStore.Key<Map<Float, LocalDate>>() }
@@ -110,7 +113,7 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                                 ),
                             guideline =
                                 rememberAxisGuidelineComponent(
-                                    fill = Fill(appColors.textSecondary.copy(alpha = 0.5f)),
+                                    fill = Fill(guidelineColor),
                                     thickness = 1.dp,
                                 ),
                         ),
