@@ -19,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -45,6 +45,7 @@ import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
+import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.ListItemGroup
@@ -107,8 +108,7 @@ fun ProductFormContent(
             modifier = modifier
                 .fillMaxSize()
                 .background(appColors.background)
-                .padding(top = 60.dp)
-                .imePadding(),
+                .padding(top = 60.dp),
         ) {
             AppHeader(
                 title = t(if (state.isEdit) "products.editTitle" else "products.addTitle", language),
@@ -216,13 +216,12 @@ private fun ProductFormActions(
                 variant = ButtonVariant.SECONDARY,
                 modifier = Modifier.weight(1f),
             )
+            AppButton(
+                text = t("products.addModal.save", language),
+                onClick = { scope.launch { vm.save { onSaved() } } },
+                modifier = Modifier.weight(1f),
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        AppButton(
-            text = t("products.addModal.save", language),
-            onClick = { scope.launch { vm.save { onSaved() } } },
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
@@ -262,65 +261,68 @@ private fun PricesSection(
     language: com.easypocket.mobile.i18n.Language,
     appColors: AppColors,
 ) {
-    Text(
-        t("products.pricesSection", language),
-        color = appColors.text,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.SemiBold,
-    )
-    Spacer(Modifier.height(8.dp))
-
+    var showAddPrice by remember { mutableStateOf(false) }
     var editingStoreId by remember { mutableStateOf<String?>(null) }
-    var isAddingPrice by remember { mutableStateOf(false) }
+    var pendingDeleteStoreId by remember { mutableStateOf<String?>(null) }
     var newStoreId by remember { mutableStateOf<String?>(null) }
     var newPriceText by remember { mutableStateOf("") }
 
-    fun resetForm() {
-        editingStoreId = null
-        isAddingPrice = false
-        newStoreId = null
-        newPriceText = ""
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            t("products.pricesSection", language),
+            color = appColors.text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        if (state.availableStores.isNotEmpty()) {
+            IconButtonCircle(
+                icon = Icons.Default.Add,
+                onClick = {
+                    newStoreId = null
+                    newPriceText = ""
+                    showAddPrice = true
+                },
+                variant = ButtonVariant.SECONDARY,
+            )
+        }
     }
+    Spacer(Modifier.height(8.dp))
 
     if (state.prices.isNotEmpty()) {
         ListItemGroup(modifier = Modifier.padding(top = 4.dp)) {
-            val firstRowIndex = state.prices.indexOfFirst { it.storeId != editingStoreId }
-            val lastRowIndex = state.prices.indexOfLast { it.storeId != editingStoreId }
             state.prices.forEachIndexed { index, row ->
-                if (editingStoreId == row.storeId) {
-                    PriceEditForm(
+                ListItemRow(
+                    onClick = {
+                        editingStoreId = row.storeId
+                        newPriceText = row.value
+                    },
+                    isFirst = index == 0,
+                    isLast = index == state.prices.lastIndex,
+                ) {
+                    PriceCardContent(
                         storeName = row.storeName,
-                        priceText = newPriceText,
-                        onPriceTextChange = { if (it.matches(PRICE_REGEX)) newPriceText = it },
-                        onConfirm = {
-                            vm.updatePrice(row.storeId, newPriceText)
-                            resetForm()
-                        },
-                        onCancel = ::resetForm,
+                        value = row.value,
+                        onRemove = { pendingDeleteStoreId = row.storeId },
                     )
-                } else {
-                    ListItemRow(
-                        onClick = {
-                            editingStoreId = row.storeId
-                            newStoreId = row.storeId
-                            newPriceText = row.value
-                            isAddingPrice = false
-                        },
-                        isFirst = index == firstRowIndex,
-                        isLast = index == lastRowIndex,
-                    ) {
-                        PriceCardContent(
-                            storeName = row.storeName,
-                            value = row.value,
-                            onRemove = { vm.removePrice(row.storeId) },
-                        )
-                    }
                 }
             }
         }
     }
 
-    if (isAddingPrice && editingStoreId == null) {
+    val noStores = state.availableStores.isEmpty() && state.prices.isEmpty()
+    val allStoresUsed = state.availableStores.isEmpty() && state.prices.isNotEmpty()
+    when {
+        noStores -> SectionMessage(t("products.noStoresAvailable", language), appColors)
+        state.prices.isEmpty() -> SectionMessage(t("products.noPrices", language), appColors)
+        allStoresUsed -> SectionMessage(t("products.allStoresUsed", language), appColors)
+    }
+
+    AppBottomSheet(
+        visible = showAddPrice,
+        onDismiss = { showAddPrice = false },
+        title = t("products.addPrice", language),
+    ) {
         AddPriceForm(
             availableStores = state.availableStores,
             selectedStoreId = newStoreId,
@@ -329,44 +331,59 @@ private fun PricesSection(
             onPriceTextChange = { if (it.matches(PRICE_REGEX)) newPriceText = it },
             onConfirm = {
                 newStoreId?.let { vm.addPrice(it, newPriceText) }
-                if (newStoreId != null) resetForm()
+                showAddPrice = false
             },
-            onCancel = ::resetForm,
+            onCancel = { showAddPrice = false },
             language = language,
         )
     }
 
-    val allStoresUsed = state.availableStores.isEmpty() && state.prices.isNotEmpty()
-    val noStores = state.availableStores.isEmpty() && state.prices.isEmpty()
-    if (editingStoreId == null) {
-        when {
-            noStores -> Text(
-                t("products.noStoresAvailable", language),
-                color = appColors.textSecondary,
-                fontSize = 13.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            allStoresUsed -> Text(
-                t("products.allStoresUsed", language),
-                color = appColors.textSecondary,
-                fontSize = 13.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            !isAddingPrice -> AppButton(
-                text = t("products.addPrice", language),
-                onClick = {
+    val editingRow = editingStoreId?.let { id -> state.prices.firstOrNull { it.storeId == id } }
+    if (editingRow != null) {
+        AppBottomSheet(
+            visible = true,
+            onDismiss = { editingStoreId = null },
+            title = editingRow.storeName,
+        ) {
+            PriceEditForm(
+                storeName = editingRow.storeName,
+                priceText = newPriceText,
+                onPriceTextChange = { if (it.matches(PRICE_REGEX)) newPriceText = it },
+                onConfirm = {
+                    vm.updatePrice(editingRow.storeId, newPriceText)
                     editingStoreId = null
-                    newStoreId = null
-                    newPriceText = ""
-                    isAddingPrice = true
                 },
-                variant = ButtonVariant.SECONDARY,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                onCancel = { editingStoreId = null },
+                language = language,
             )
         }
     }
+
+    val deletingRow = pendingDeleteStoreId?.let { id -> state.prices.firstOrNull { it.storeId == id } }
+    if (deletingRow != null) {
+        ConfirmSheet(
+            visible = true,
+            title = t("products.removePriceTitle", language),
+            message = deletingRow.storeName,
+            confirmLabel = t("products.delete", language),
+            onConfirm = {
+                vm.removePrice(deletingRow.storeId)
+                pendingDeleteStoreId = null
+            },
+            onDismiss = { pendingDeleteStoreId = null },
+        )
+    }
+}
+
+@Composable
+private fun SectionMessage(text: String, appColors: AppColors) {
+    Text(
+        text,
+        color = appColors.textSecondary,
+        fontSize = 13.sp,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
 }
 
 private val PRICE_REGEX = Regex("^\\d*\\.?\\d*$")
@@ -417,34 +434,28 @@ private fun PriceEditForm(
     onPriceTextChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
+    language: com.easypocket.mobile.i18n.Language,
 ) {
-    val appColors = LocalAppColors.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(appColors.surface)
-            .padding(12.dp),
-    ) {
-        Text(storeName, color = appColors.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(8.dp))
+    Column(Modifier.fillMaxWidth()) {
         DecimalTextField(
             value = priceText,
             onValueChange = onPriceTextChange,
-            placeholder = "",
+            placeholder = storeName,
         )
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButtonCircle(
-                icon = Icons.Default.Check,
-                onClick = onConfirm,
-                variant = ButtonVariant.PRIMARY,
-                modifier = Modifier.weight(1f),
-            )
-            IconButtonCircle(
-                icon = Icons.Default.Close,
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AppButton(
+                text = t("products.addModal.cancel", language),
                 onClick = onCancel,
                 variant = ButtonVariant.SECONDARY,
+                modifier = Modifier.weight(1f),
+            )
+            AppButton(
+                text = t("products.addModal.save", language),
+                onClick = onConfirm,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -462,14 +473,7 @@ private fun AddPriceForm(
     onCancel: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
 ) {
-    val appColors = LocalAppColors.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(appColors.surface)
-            .padding(12.dp),
-    ) {
+    Column(Modifier.fillMaxWidth()) {
         val options = availableStores.map { SelectOption(it.id, it.description) }
         SelectField(
             options = options,
@@ -483,18 +487,20 @@ private fun AddPriceForm(
             onValueChange = onPriceTextChange,
             placeholder = t("products.addModal.pricePlaceholder", language),
         )
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButtonCircle(
-                icon = Icons.Default.Check,
-                onClick = onConfirm,
-                variant = ButtonVariant.PRIMARY,
-                modifier = Modifier.weight(1f),
-            )
-            IconButtonCircle(
-                icon = Icons.Default.Close,
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AppButton(
+                text = t("products.addModal.cancel", language),
                 onClick = onCancel,
                 variant = ButtonVariant.SECONDARY,
+                modifier = Modifier.weight(1f),
+            )
+            AppButton(
+                text = t("products.addModal.save", language),
+                onClick = onConfirm,
                 modifier = Modifier.weight(1f),
             )
         }

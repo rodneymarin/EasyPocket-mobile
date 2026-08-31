@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -105,8 +104,7 @@ fun StoreFormContent(
         modifier = modifier
             .fillMaxSize()
             .background(appColors.background)
-            .padding(top = 60.dp)
-            .imePadding(),
+            .padding(top = 60.dp),
     ) {
         AppHeader(
             title = t(if (state.isEdit) "stores.editTitle" else "stores.addTitle", language),
@@ -153,13 +151,12 @@ fun StoreFormContent(
                     variant = ButtonVariant.SECONDARY,
                     modifier = Modifier.weight(1f),
                 )
+                AppButton(
+                    text = t("stores.addModal.save", language),
+                    onClick = { scope.launch { vm.save { onSaved() } } },
+                    modifier = Modifier.weight(1f),
+                )
             }
-            Spacer(Modifier.height(8.dp))
-            AppButton(
-                text = t("stores.addModal.save", language),
-                onClick = { scope.launch { vm.save { onSaved() } } },
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 

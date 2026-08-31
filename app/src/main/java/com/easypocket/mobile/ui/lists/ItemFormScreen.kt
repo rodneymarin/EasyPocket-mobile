@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -93,8 +92,7 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
         modifier = Modifier
             .fillMaxSize()
             .background(appColors.background)
-            .padding(top = 60.dp)
-            .imePadding(),
+            .padding(top = 60.dp),
     ) {
         AppHeader(
             title = if (uiState.isEdit) t("listItem.editTitle", language) else t("listItem.addTitle", language),
@@ -209,28 +207,27 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                     variant = ButtonVariant.SECONDARY,
                     modifier = Modifier.weight(1f),
                 )
-            }
-            Spacer(Modifier.height(8.dp))
-            AppButton(
-                text = t("listItem.save", language),
-                onClick = {
-                    scope.launch {
-                        vm.save { savedId ->
-                            if (savedId != null) {
-                                navController.previousBackStackEntry
-                                    ?.savedStateHandle?.set(KEY_NEWLY_ADDED_ID, savedId)
+                AppButton(
+                    text = t("listItem.save", language),
+                    onClick = {
+                        scope.launch {
+                            vm.save { savedId ->
+                                if (savedId != null) {
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle?.set(KEY_NEWLY_ADDED_ID, savedId)
+                                }
+                                goBack()
+                                toast.show(
+                                    t(if (uiState.isEdit) "toast.itemUpdated" else "toast.itemAdded", language),
+                                    ToastType.SUCCESS,
+                                )
                             }
-                            goBack()
-                            toast.show(
-                                t(if (uiState.isEdit) "toast.itemUpdated" else "toast.itemAdded", language),
-                                ToastType.SUCCESS,
-                            )
                         }
-                    }
-                },
-                enabled = uiState.isQuantityValid && uiState.productId != null,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                    },
+                    enabled = uiState.isQuantityValid && uiState.productId != null,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
