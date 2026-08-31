@@ -70,14 +70,14 @@ class CategoryFormViewModelTest {
         val v = vm()
         v.load(null)
         v.setName("Abarrotes")
-        var saved = false
-        v.save { saved = true }
-        assertTrue(saved)
+        var savedId: String? = null
+        v.save { savedId = it }
         assertFalse(v.uiState.value.nameError)
         val stored = categoriesRepository.getAll()
         assertEquals(1, stored.size)
         assertEquals("Abarrotes", stored.first().name)
         assertEquals(6, stored.first().id.length)
+        assertEquals(stored.first().id, savedId)
     }
 
     @Test

@@ -50,6 +50,19 @@ class TranslationsTest {
     }
 
     @Test
+    fun `history range keys are translated in both languages`() {
+        listOf(
+            "history.range.7",
+            "history.range.30",
+            "history.range.90",
+            "history.range.365",
+        ).forEach { key ->
+            assertNotEquals(key, t(key, Language.ENGLISH))
+            assertNotEquals(key, t(key, Language.SPANISH))
+        }
+    }
+
+    @Test
     fun `backup keys are translated in both languages`() {
         listOf(
             "backup.exportSuccess",

@@ -149,6 +149,7 @@ private fun RangeChips(selected: Int?, onSelect: (Int?) -> Unit) {
         7 to "history.range.7",
         30 to "history.range.30",
         90 to "history.range.90",
+        365 to "history.range.365",
     )
     Row(
         modifier = Modifier

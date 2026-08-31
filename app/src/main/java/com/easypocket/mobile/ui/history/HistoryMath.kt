@@ -50,14 +50,14 @@ object HistoryMath {
         } else {
             byDay.keys.sorted()
         }
-        return sampleKeyPoints(days.map { HistoryChartPoint(it, byDay[it] ?: 0.0) })
+        return bucketKeyPoints(days.map { HistoryChartPoint(it, byDay[it] ?: 0.0) })
     }
 
-    private fun sampleKeyPoints(points: List<HistoryChartPoint>, max: Int = 7): List<HistoryChartPoint> {
+    private fun bucketKeyPoints(points: List<HistoryChartPoint>, max: Int = 7): List<HistoryChartPoint> {
         if (points.size <= max) return points
-        val lastIndex = points.size - 1
-        return (0 until max).map { i ->
-            points[Math.round(i * lastIndex.toDouble() / (max - 1)).toInt()]
+        val bucketSize = kotlin.math.ceil(points.size / max.toDouble()).toInt()
+        return points.chunked(bucketSize).map { bucket ->
+            HistoryChartPoint(bucket.last().date, bucket.sumOf { it.total })
         }
     }
 

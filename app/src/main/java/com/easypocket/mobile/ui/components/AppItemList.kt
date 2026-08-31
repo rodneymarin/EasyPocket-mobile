@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,6 +24,7 @@ private val ItemListTrailingSpace = 44.dp
 fun AppItemList(
     modifier: Modifier = Modifier,
     footerText: String? = null,
+    listState: LazyListState = rememberLazyListState(),
     content: LazyListScope.() -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -32,6 +35,7 @@ fun AppItemList(
                 .padding(top = 12.dp, start = 16.dp, end = 16.dp),
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 4.dp, bottom = ItemListTrailingSpace),
                 verticalArrangement = Arrangement.spacedBy(2.dp),

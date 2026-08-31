@@ -1,6 +1,13 @@
 package com.easypocket.mobile.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -49,12 +56,33 @@ fun ListItemRow(
     isFirst: Boolean = false,
     isLast: Boolean = false,
     backgroundColor: Color? = null,
+    highlighted: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val appColors = LocalAppColors.current
     val isDark = LocalIsDark.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+
+    val highlightBase by animateFloatAsState(
+        targetValue = if (highlighted) 1f else 0f,
+        animationSpec = tween(durationMillis = if (highlighted) 150 else 300, easing = FastOutSlowInEasing),
+        label = "newItemHighlightBase",
+    )
+    val pulseFactor = if (highlighted) {
+        rememberInfiniteTransition(label = "newItemPulse").animateFloat(
+            initialValue = 0.35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "newItemPulseFactor",
+        ).value
+    } else {
+        1f
+    }
+    val highlightBackground = appColors.primary.copy(alpha = 0.28f * highlightBase * pulseFactor)
 
     val overlay by animateColorAsState(
         targetValue = if (isPressed) {
@@ -83,7 +111,8 @@ fun ListItemRow(
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )
-        Box(Modifier.matchParentSize().background(overlay))
+        Box(Modifier.matchParentSize().clip(shape).background(highlightBackground))
+        Box(Modifier.matchParentSize().clip(shape).background(overlay))
     }
 }
 

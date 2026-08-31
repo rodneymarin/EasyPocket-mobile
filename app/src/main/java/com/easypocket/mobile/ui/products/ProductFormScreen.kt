@@ -6,6 +6,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
+import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
 
@@ -26,6 +27,10 @@ fun ProductFormScreen(navController: NavController, productId: String) {
         isSheet = false,
         onSaved = {
             val wasEdit = vm.uiState.value.isEdit
+            if (!wasEdit) {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle?.set(KEY_NEWLY_ADDED_ID, vm.uiState.value.productId)
+            }
             goBack()
             toast.show(
                 t(if (wasEdit) "toast.productUpdated" else "toast.productCreated", language),

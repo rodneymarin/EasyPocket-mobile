@@ -52,6 +52,7 @@ import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SelectField
 import com.easypocket.mobile.ui.components.SelectOption
@@ -214,7 +215,11 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                 text = t("listItem.save", language),
                 onClick = {
                     scope.launch {
-                        vm.save {
+                        vm.save { savedId ->
+                            if (savedId != null) {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle?.set(KEY_NEWLY_ADDED_ID, savedId)
+                            }
                             goBack()
                             toast.show(
                                 t(if (uiState.isEdit) "toast.itemUpdated" else "toast.itemAdded", language),

@@ -42,7 +42,7 @@ class CategoryFormViewModel @Inject constructor(
         _uiState.update { it.copy(name = name, nameError = false) }
     }
 
-    suspend fun save(onSaved: () -> Unit) {
+    suspend fun save(onSaved: (String?) -> Unit) {
         val state = _uiState.value
         val name = state.name.trim()
         if (name.isEmpty()) {
@@ -53,6 +53,7 @@ class CategoryFormViewModel @Inject constructor(
             _uiState.update { it.copy(nameError = true) }
             return
         }
+        var savedId: String? = null
         if (state.isEdit && state.category != null) {
             val updated = state.category.copy(name = name)
             categoriesRepository.update(updated)
@@ -60,8 +61,9 @@ class CategoryFormViewModel @Inject constructor(
         } else {
             val created = categoriesRepository.create(name)
             _uiState.update { it.copy(category = created, nameError = false) }
+            savedId = created.id
         }
-        onSaved()
+        onSaved(savedId)
     }
 
     suspend fun delete(onDeleted: () -> Unit) {

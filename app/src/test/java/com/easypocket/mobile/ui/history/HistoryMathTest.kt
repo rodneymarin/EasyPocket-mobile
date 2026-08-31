@@ -60,7 +60,7 @@ class HistoryMathTest {
     }
 
     @Test
-    fun `dailyTotals samples at most 7 equidistant key points for long ranges`() {
+    fun `dailyTotals aggregates long ranges into at most 7 equal buckets`() {
         val records = listOf(
             entity("2026-08-01", 10.0),
             entity("2026-08-15", 20.0),
@@ -70,13 +70,11 @@ class HistoryMathTest {
 
         val points = HistoryMath.dailyTotals(records, 30, today)
 
-        assertEquals(7, points.size)
-        assertEquals(LocalDate.of(2026, 7, 29), points.first().date) // inicio de la ventana de 30 días
+        assertTrue(points.size <= 7)
         assertEquals(LocalDate.of(2026, 8, 27), points.last().date)
-        assertEquals(0.0, points.first().total, 0.001)
+        assertEquals(75.0, points.sumOf { it.total }, 0.001) // conserva todos los totales
         assertEquals(40.0, points.last().total, 0.001)
-        val gaps = points.zipWithNext().map { (a, b) -> b.date.toEpochDay() - a.date.toEpochDay() }
-        assertEquals(setOf(4L, 5L), gaps.toSet())
+        assertTrue(points.zipWithNext().all { (a, b) -> a.date < b.date }) // buckets ordenados
     }
 
     @Test
@@ -128,6 +126,20 @@ class HistoryMathTest {
         assertEquals(15.0, totals["CAT1"]!!, 0.001)
         assertEquals(20.0, totals["CAT2"]!!, 0.001)
         assertEquals(15.0, totals[null]!!, 0.001)
+    }
+
+    @Test
+    fun `dailyTotals reflects purchases for a 365 day range`() {
+        val start = LocalDate.of(2025, 8, 28) // inicio de la ventana de 365 días
+        val records = listOf(
+            entity(start.plusDays(50).toString(), 100.0),
+            entity(start.plusDays(200).toString(), 300.0),
+            entity("2026-08-27", 50.0),
+        )
+
+        val points = HistoryMath.dailyTotals(records, 365, today)
+
+        assertEquals(450.0, points.sumOf { it.total }, 0.001) // conserva todos los totales
     }
 
     @Test

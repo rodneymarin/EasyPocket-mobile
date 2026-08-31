@@ -108,7 +108,7 @@ class ItemFormViewModel @Inject constructor(
         recompute()
     }
 
-    suspend fun save(onSaved: () -> Unit) {
+    suspend fun save(onSaved: (Long?) -> Unit) {
         val state = _uiState.value
         if (!state.isQuantityValid || state.productId == null) return
         val listId = this.listId ?: return
@@ -118,14 +118,15 @@ class ItemFormViewModel @Inject constructor(
         }
         val quantity = state.quantityText.toDouble()
         val storeId = state.storeId
-        if (state.isEdit && originalItem != null) {
+        val savedId = if (state.isEdit && originalItem != null) {
             listsRepository.updateItem(
                 originalItem!!.copy(productId = state.productId, storeId = storeId, quantity = quantity)
             )
+            null
         } else {
             listsRepository.addItem(listId, state.productId, storeId, quantity)
         }
-        onSaved()
+        onSaved(savedId)
     }
 
     suspend fun delete(onDeleted: () -> Unit) {

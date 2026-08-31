@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.easypocket.mobile.domain.Store
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
@@ -50,7 +52,9 @@ import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.rememberHighlightedNewItemId
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
@@ -74,6 +78,7 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
 
     var searchText by rememberSaveable { mutableStateOf("") }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(refreshTick) { vm.refresh() }
 
@@ -131,6 +136,7 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
                     onStoreLongPress = { id ->
                         if (!isSelectionMode) vm.setSelection(setOf(id))
                     },
+                    navBackStackEntry = backStackEntry,
                 )
                 else -> EmptyState(
                     text = if (uiState.stores.isEmpty()) t("stores.empty", language) else t("common.noResults", language),
@@ -205,9 +211,17 @@ private fun StoresList(
     language: Language,
     onStorePress: (String) -> Unit,
     onStoreLongPress: (String) -> Unit,
+    navBackStackEntry: NavBackStackEntry?,
 ) {
+    val listState = rememberLazyListState()
+    val highlightedId = rememberHighlightedNewItemId(
+        navBackStackEntry = navBackStackEntry,
+        displayedIds = uiState.filtered.map { it.id },
+        listState = listState,
+    )
     AppItemList(
         footerText = t("stores.showingCount", language, mapOf("count" to uiState.filtered.size.toString())),
+        listState = listState,
     ) {
         itemsIndexed(uiState.filtered, key = { _, store -> store.id }) { index, store ->
             ListItemRow(
@@ -215,6 +229,7 @@ private fun StoresList(
                 onLongClick = { onStoreLongPress(store.id) },
                 isFirst = index == 0,
                 isLast = index == uiState.filtered.lastIndex,
+                highlighted = store.id == highlightedId,
             ) {
                 StoreCardContent(
                     store = store,

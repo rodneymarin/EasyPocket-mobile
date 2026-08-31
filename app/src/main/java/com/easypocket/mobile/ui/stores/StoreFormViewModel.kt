@@ -47,7 +47,7 @@ class StoreFormViewModel @Inject constructor(
         _uiState.update { it.copy(color = color) }
     }
 
-    suspend fun save(onSaved: () -> Unit) {
+    suspend fun save(onSaved: (String?) -> Unit) {
         val state = _uiState.value
         val name = state.name.trim()
         if (name.isEmpty()) {
@@ -65,7 +65,7 @@ class StoreFormViewModel @Inject constructor(
             withColor
         }
         _uiState.update { it.copy(store = saved, nameError = false) }
-        onSaved()
+        onSaved(if (state.isEdit) null else saved.id)
     }
 
     suspend fun delete(onDeleted: () -> Unit) {

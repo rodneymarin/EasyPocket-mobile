@@ -133,13 +133,13 @@ class ProductFormViewModelTest {
         vm.setName("Zanahoria")
         vm.setUnit(UnitOfMeasurement.KG)
         vm.addPrice("store-demo", "5.5")
-        var saved = false
-        vm.save { saved = true }
-        assertTrue(saved)
+        var savedId: String? = null
+        vm.save { savedId = it }
+        assertNotNull(savedId)
         assertFalse(vm.uiState.value.nameError)
-        assertNotNull(vm.uiState.value.productId)
         val found = productsRepository.getByName("Zanahoria")
         assertNotNull(found)
+        assertEquals(found!!.id, savedId)
         assertEquals(UnitOfMeasurement.KG, found!!.unitOfMeasurement)
         assertEquals(1, found.prices.size)
     }

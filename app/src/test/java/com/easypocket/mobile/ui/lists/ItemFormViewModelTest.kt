@@ -107,11 +107,14 @@ class ItemFormViewModelTest {
         vm.selectProduct("prod-001")
         vm.setStore("store-demo")
         vm.setQuantity("2")
-        var saved = false
-        vm.save { saved = true }
-        assertTrue(saved)
+        var savedId: Long? = null
+        vm.save { savedId = it }
+        assertNotNull(savedId)
         val list = listsRepository.getById("0oasidu0as9dua0sd")!!
-        assertTrue(list.items.any { it.productId == "prod-001" && it.quantity == 2.0 && it.storeId == "store-demo" })
+        val inserted = list.items.first { it.id == savedId }
+        assertEquals("prod-001", inserted.productId)
+        assertEquals(2.0, inserted.quantity, 0.001)
+        assertEquals("store-demo", inserted.storeId)
     }
 
     @Test
@@ -132,9 +135,9 @@ class ItemFormViewModelTest {
         editVm.load("0oasidu0as9dua0sd", item.id)
         assertTrue(editVm.uiState.value.isEdit)
         editVm.setQuantity("7")
-        var updated = false
-        editVm.save { updated = true }
-        assertTrue(updated)
+        var updatedId: Long? = null
+        editVm.save { updatedId = it }
+        assertNull(updatedId)
         val reloaded = listsRepository.getById("0oasidu0as9dua0sd")!!
         val updatedItem = reloaded.items.first { it.id == item.id }
         assertEquals(7.0, updatedItem.quantity, 0.001)

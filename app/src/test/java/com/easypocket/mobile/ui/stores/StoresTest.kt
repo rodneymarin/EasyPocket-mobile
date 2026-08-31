@@ -172,13 +172,13 @@ class StoresTest {
         vm.load(null)
         vm.setName("Farmacia")
         vm.setColor(5)
-        var saved = false
-        vm.save { saved = true }
-        assertTrue(saved)
+        var savedId: String? = null
+        vm.save { savedId = it }
+        assertNotNull(savedId)
         assertFalse(vm.uiState.value.nameError)
         val created = storesRepository.getAll().first { it.description == "Farmacia" }
         assertEquals(5, created.color)
-        assertNotNull(created.id)
+        assertEquals(created.id, savedId)
     }
 
     @Test
@@ -188,9 +188,9 @@ class StoresTest {
         vm.load("store-demo")
         vm.setName("Mercado Central")
         vm.setColor(2)
-        var saved = false
-        vm.save { saved = true }
-        assertTrue(saved)
+        var updatedId: String? = null
+        vm.save { updatedId = it }
+        assertNull(updatedId)
         assertFalse(vm.uiState.value.nameError)
         val updated = storesRepository.getAll().first { it.id == "store-demo" }
         assertEquals("Mercado Central", updated.description)

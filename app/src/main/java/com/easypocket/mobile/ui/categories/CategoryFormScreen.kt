@@ -34,6 +34,7 @@ import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
+import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
@@ -56,6 +57,10 @@ fun CategoryFormScreen(navController: NavController, categoryId: String) {
         vm = vm,
         onSaved = {
             val wasEdit = vm.uiState.value.isEdit
+            if (!wasEdit) {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle?.set(KEY_NEWLY_ADDED_ID, vm.uiState.value.category?.id)
+            }
             goBack()
             toast.show(
                 t(if (wasEdit) "toast.categoryUpdated" else "toast.categoryCreated", language),

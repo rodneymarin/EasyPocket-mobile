@@ -112,7 +112,7 @@ class ProductFormViewModel @Inject constructor(
         recomputeAvailable()
     }
 
-    suspend fun save(onSaved: () -> Unit) {
+    suspend fun save(onSaved: (String?) -> Unit) {
         val state = _uiState.value
         val name = state.name.trim()
         if (name.isEmpty()) {
@@ -132,7 +132,7 @@ class ProductFormViewModel @Inject constructor(
             productsRepository.create(name, state.unit, prices, state.categoryId)
         }
         _uiState.update { it.copy(productId = saved.id, nameError = false) }
-        onSaved()
+        onSaved(if (state.isEdit) null else saved.id)
     }
 
     suspend fun delete(onDeleted: () -> Unit) {

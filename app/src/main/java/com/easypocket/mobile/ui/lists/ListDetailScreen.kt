@@ -7,8 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
@@ -46,11 +52,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListIcon
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
@@ -79,6 +89,7 @@ import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.rememberHighlightedNewItemId
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
@@ -96,6 +107,8 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     val scope = rememberCoroutineScope()
 
     var showMenu by remember { mutableStateOf(false) }
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
     var showRename by rememberSaveable { mutableStateOf(false) }
     var renameInput by remember { mutableStateOf("") }
     var renameIcon by remember { mutableStateOf("") }
@@ -190,7 +203,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                     },
                     onRemoveCompleted = { showRemoveCompleted = true },
                     onArchive = { showArchive = true },
-                    onSelectStore = { vm.setStoreFilter(it) },
+                    onShowFilter = { showFilterSheet = true },
                     onCloseSelection = { vm.clearSelection() },
                     onMove = {
                         scope.launch { moveLists = vm.moveTargetLists() }
@@ -210,6 +223,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         uiState = uiState,
                         list = list,
                         language = language,
+                        navBackStackEntry = backStackEntry,
                         onItemPress = { item ->
                             if (uiState.isSelectionMode) {
                                 vm.setSelection(uiState.selection.toggle(item.id))
@@ -235,6 +249,18 @@ fun ListDetailScreen(navController: NavController, listId: String) {
             }
         }
     }
+
+    FilterSheet(
+        visible = showFilterSheet,
+        stores = uiState.filterStores,
+        categories = uiState.filterCategories,
+        activeStoreId = uiState.storeFilter,
+        activeCategoryId = uiState.categoryFilter,
+        language = language,
+        onSelectStore = { vm.setStoreFilter(it) },
+        onSelectCategory = { vm.setCategoryFilter(it) },
+        onDismiss = { showFilterSheet = false },
+    )
 
     RenameSheet(
         visible = showRename,
@@ -353,7 +379,7 @@ private fun ActionBar(
     onUncheckAll: () -> Unit,
     onRemoveCompleted: () -> Unit,
     onArchive: () -> Unit,
-    onSelectStore: (String?) -> Unit,
+    onShowFilter: () -> Unit,
     onCloseSelection: () -> Unit,
     onMove: () -> Unit,
     onPin: () -> Unit,
@@ -374,20 +400,29 @@ private fun ActionBar(
     }
 
     Column {
-        if (shouldShowFilterBar(uiState)) {
-            StoreFilterBar(
-                stores = uiState.filterStores,
-                activeStoreId = uiState.storeFilter,
-                onSelectStore = onSelectStore,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TotalsBlock(total = uiState.visibleTotal, cartTotal = uiState.cartTotal, language = language)
             Spacer(Modifier.weight(1f))
+            val activeStore = uiState.storeFilter?.let { id -> uiState.stores.firstOrNull { it.id == id } }
+            val activeCategory = uiState.categoryFilter?.let { id -> uiState.categoriesById[id] }
+            if (activeStore != null || activeCategory != null) {
+                FilterChipButton(
+                    storeName = activeStore?.description,
+                    categoryName = activeCategory?.name,
+                    onClick = onShowFilter,
+                )
+                Spacer(Modifier.width(8.dp))
+            } else {
+                IconButtonCircle(
+                    icon = Icons.Default.FilterList,
+                    onClick = onShowFilter,
+                    variant = ButtonVariant.SECONDARY,
+                )
+                Spacer(Modifier.width(8.dp))
+            }
             Box {
                 IconButtonCircle(
                     icon = Icons.Default.MoreVert,
@@ -435,12 +470,140 @@ private fun ActionBar(
     }
 }
 
-private fun shouldShowFilterBar(uiState: ListDetailUiState): Boolean {
-    val items = uiState.list?.items ?: return false
-    val usedStoreCount = uiState.filterStores.size
-    val hasStoreless = items.any { it.storeId == null }
-    val hasStored = items.any { it.storeId != null }
-    return usedStoreCount > 1 || (hasStoreless && hasStored)
+@Composable
+private fun FilterChipButton(storeName: String?, categoryName: String?, onClick: () -> Unit) {
+    val appColors = LocalAppColors.current
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(appColors.primary)
+            .clickable(onClick = onClick)
+            .height(IntrinsicSize.Min)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (storeName != null) {
+            Text(
+                text = storeName,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (storeName != null && categoryName != null) {
+            Box(
+                Modifier
+                    .padding(horizontal = 8.dp)
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(Color.White.copy(alpha = 0.4f)),
+            )
+        }
+        if (categoryName != null) {
+            Text(
+                text = categoryName,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterOptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) appColors.primary else Color.Transparent)
+            .border(1.dp, if (selected) Color.Transparent else appColors.border, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = text,
+            color = if (selected) Color.White else appColors.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSheet(
+    visible: Boolean,
+    stores: List<Store>,
+    categories: List<Category>,
+    activeStoreId: String?,
+    activeCategoryId: String?,
+    language: Language,
+    onSelectStore: (String?) -> Unit,
+    onSelectCategory: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppBottomSheet(visible = visible, onDismiss = onDismiss, title = t("listDetail.filterTitle", language)) {
+        FilterSectionHeader(t("listDetail.filterStores", language))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterOptionChip(
+                text = t("listDetail.filterAllStores", language),
+                selected = activeStoreId == null,
+                onClick = { onSelectStore(null) },
+            )
+            stores.forEach { store ->
+                FilterOptionChip(
+                    text = store.description,
+                    selected = activeStoreId == store.id,
+                    onClick = { onSelectStore(store.id) },
+                )
+            }
+        }
+        FilterSectionHeader(t("listDetail.filterCategories", language), topSpacing = 16.dp)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterOptionChip(
+                text = t("listDetail.filterAllCategories", language),
+                selected = activeCategoryId == null,
+                onClick = { onSelectCategory(null) },
+            )
+            categories.forEach { category ->
+                FilterOptionChip(
+                    text = category.name,
+                    selected = activeCategoryId == category.id,
+                    onClick = { onSelectCategory(category.id) },
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun FilterSectionHeader(text: String, topSpacing: Dp = 0.dp) {
+    val appColors = LocalAppColors.current
+    Column {
+        Spacer(Modifier.height(topSpacing))
+        Text(
+            text = text,
+            color = appColors.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
 }
 
 @Composable
@@ -501,11 +664,18 @@ private fun ItemsList(
     uiState: ListDetailUiState,
     list: ShoppingList,
     language: Language,
+    navBackStackEntry: NavBackStackEntry?,
     onItemPress: (ShoppingListItem) -> Unit,
     onItemLongPress: (ShoppingListItem) -> Unit,
     onToggleDone: (ShoppingListItem) -> Unit,
 ) {
     val appColors = LocalAppColors.current
+    val listState = rememberLazyListState()
+    val highlightedItemId = rememberHighlightedNewItemId(
+        navBackStackEntry = navBackStackEntry,
+        displayedIds = uiState.pendingItems.map { it.id },
+        listState = listState,
+    )
     AppItemList(
         footerText = t(
             "list.items",
@@ -532,10 +702,12 @@ private fun ItemsList(
                         isFirst = index == 0,
                         isLast = index == uiState.pendingItems.lastIndex,
                         backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                        highlighted = item.id == highlightedItemId,
                     ) {
                         DetailItemCardContent(
                             item = item,
                             productsById = uiState.productsById,
+                            categoriesById = uiState.categoriesById,
                             stores = uiState.stores,
                             isSelectionMode = uiState.isSelectionMode,
                             isSelected = item.id in uiState.selection,
@@ -559,6 +731,7 @@ private fun ItemsList(
                             DetailItemCardContent(
                                 item = item,
                                 productsById = uiState.productsById,
+                                categoriesById = uiState.categoriesById,
                                 stores = uiState.stores,
                                 isSelectionMode = uiState.isSelectionMode,
                                 isSelected = item.id in uiState.selection,
@@ -602,6 +775,7 @@ private fun EmptyMessage(text: String) {
 private fun DetailItemCardContent(
     item: ShoppingListItem,
     productsById: Map<String, Product>,
+    categoriesById: Map<String, Category>,
     stores: List<Store>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
@@ -660,13 +834,20 @@ private fun DetailItemCardContent(
                         } else {
                             StorelessTag(text = t("listDetail.noStore", language), appColors = appColors)
                         }
-                        Spacer(Modifier.weight(1f))
-                        if (price * item.quantity > 0) {
-                            Tag(text = "$${formatAmount(price * item.quantity)}", size = TagSize.SM)
+                        val category = product?.categoryId?.let { categoriesById[it] }
+                        if (category != null) {
                             Spacer(Modifier.width(6.dp))
+                            Tag(text = category.name, size = TagSize.SM)
                         }
-                        Tag(text = "${ListLogic.trimQuantity(item.quantity)} $unitLabel", size = TagSize.SM)
                     }
+                }
+                Spacer(Modifier.width(6.dp))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
+                    if (price * item.quantity > 0) {
+                        Tag(text = "$${formatAmount(price * item.quantity)}", size = TagSize.SM)
+                        Spacer(Modifier.height(2.dp))
+                    }
+                    Tag(text = "${ListLogic.trimQuantity(item.quantity)} $unitLabel", size = TagSize.SM)
                 }
                 Spacer(Modifier.width(6.dp))
                 if (!isSelectionMode) {

@@ -5,11 +5,13 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
+import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
@@ -57,6 +59,7 @@ class ListDetailViewModelTest {
                 priceDao = db.priceDao(),
                 storeDao = db.storeDao(),
             ),
+            CategoryRepository(db, db.categoryDao(), db.productDao()),
         )
     }
 
@@ -71,6 +74,80 @@ class ListDetailViewModelTest {
         assertEquals(null, state.storeFilter)
         assertTrue(state.selection.isEmpty())
         assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `load populates categoriesById`() = runTest {
+        val vm = createVm()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        val created = categoryRepository.create("Vegetales")
+        vm.load("0oasidu0as9dua0sd")
+        val state = vm.uiState.value
+        assertEquals("Vegetales", state.categoriesById[created.id]?.name)
+    }
+
+    @Test
+    fun `setCategoryFilter filters the displayed item list`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        val cat = categoryRepository.create("Vegetales")
+        val papa = productsRepository.getAll().first { it.id == "prod-001" }
+        productsRepository.update(papa.copy(categoryId = cat.id))
+        vm.load("0oasidu0as9dua0sd")
+        assertEquals(3, vm.uiState.value.pendingItems.size)
+        vm.setCategoryFilter(cat.id)
+        assertEquals(setOf("prod-001"), vm.uiState.value.pendingItems.map { it.productId }.toSet())
+        vm.setCategoryFilter(null)
+        assertEquals(3, vm.uiState.value.pendingItems.size)
+    }
+
+    @Test
+    fun `store and category filters combine`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        val cat = categoryRepository.create("Vegetales")
+        val papa = productsRepository.getAll().first { it.id == "prod-001" }
+        productsRepository.update(papa.copy(categoryId = cat.id))
+        vm.load("0oasidu0as9dua0sd")
+        vm.setStoreFilter("store-demo")
+        assertEquals(setOf("prod-001", "prod-002"), vm.uiState.value.pendingItems.map { it.productId }.toSet())
+        vm.setCategoryFilter(cat.id)
+        assertEquals(setOf("prod-001"), vm.uiState.value.pendingItems.map { it.productId }.toSet())
+        val item = vm.uiState.value.list!!.items.first { it.productId == "prod-001" }
+        val product = vm.uiState.value.productsById["prod-001"]!!
+        assertEquals(ListLogic.itemTotal(item, product), vm.uiState.value.visibleTotal, 0.001)
+    }
+
+    @Test
+    fun `filterCategories returns categories used by list items`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        val cat1 = categoryRepository.create("Vegetales")
+        val cat2 = categoryRepository.create("Lacteos")
+        val papa = productsRepository.getAll().first { it.id == "prod-001" }
+        productsRepository.update(papa.copy(categoryId = cat1.id))
+        val leche = productsRepository.getAll().first { it.id == "prod-004" }
+        productsRepository.update(leche.copy(categoryId = cat2.id))
+        vm.load("0oasidu0as9dua0sd")
+        assertEquals(setOf(cat1.id), vm.uiState.value.filterCategories.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `removeCompleted resets category filter when no items match it`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        val cat = categoryRepository.create("Lacteos")
+        val leche = productsRepository.getAll().first { it.id == "prod-004" }
+        productsRepository.update(leche.copy(categoryId = cat.id))
+        val listId = "aosidoaisud0a89sud0a9sdui"
+        vm.load(listId)
+        vm.setCategoryFilter(cat.id)
+        assertEquals(1, vm.uiState.value.pendingItems.size)
+        vm.toggleDone(vm.uiState.value.list!!.items.first { it.productId == "prod-004" })
+        vm.removeCompleted()
+        assertEquals(null, vm.uiState.value.categoryFilter)
+        assertEquals(3, vm.uiState.value.pendingItems.size)
     }
 
     @Test
