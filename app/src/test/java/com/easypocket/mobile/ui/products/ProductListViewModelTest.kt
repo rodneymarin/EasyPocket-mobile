@@ -8,6 +8,7 @@ import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
+import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
 import com.easypocket.mobile.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
@@ -43,7 +44,11 @@ class ProductListViewModelTest {
         productsRepository = ProductRepository(db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
         Seeder(db).seedIfEmpty()
-        vm = ProductListViewModel(productsRepository, CategoryRepository(db, db.categoryDao(), db.productDao()))
+        vm = ProductListViewModel(
+            productsRepository,
+            CategoryRepository(db, db.categoryDao(), db.productDao()),
+            StoreRepository(db.storeDao()),
+        )
         return vm
     }
 

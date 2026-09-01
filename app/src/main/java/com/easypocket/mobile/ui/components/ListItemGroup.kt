@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,6 +58,10 @@ fun ListItemRow(
     isLast: Boolean = false,
     backgroundColor: Color? = null,
     highlighted: Boolean = false,
+    minHeight: Dp = 56.dp,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+    outerCorner: Dp = ListItemOuterCorner,
+    innerCorner: Dp = ListItemInnerCorner,
     content: @Composable RowScope.() -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -91,14 +96,15 @@ fun ListItemRow(
         label = "listItemRowOverlay",
     )
 
-    val shape = listRowShape(isFirst, isLast)
+    val shape = listRowShape(isFirst, isLast, outerCorner, innerCorner)
+    val rowBackground = backgroundColor ?: appColors.cardBackground
 
     Box {
         Row(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(shape)
-                .background(backgroundColor ?: appColors.cardBackground)
+                .background(rowBackground)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -106,8 +112,8 @@ fun ListItemRow(
                     onClick = onClick,
                     onLongClick = onLongClick,
                 )
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .heightIn(min = minHeight)
+                .padding(contentPadding),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )
@@ -116,9 +122,7 @@ fun ListItemRow(
     }
 }
 
-private fun listRowShape(isFirst: Boolean, isLast: Boolean): RoundedCornerShape {
-    val outer: Dp = ListItemOuterCorner
-    val inner: Dp = ListItemInnerCorner
+private fun listRowShape(isFirst: Boolean, isLast: Boolean, outer: Dp, inner: Dp): RoundedCornerShape {
     return when {
         isFirst && isLast -> RoundedCornerShape(outer)
         isFirst -> RoundedCornerShape(topStart = outer, topEnd = outer, bottomStart = inner, bottomEnd = inner)

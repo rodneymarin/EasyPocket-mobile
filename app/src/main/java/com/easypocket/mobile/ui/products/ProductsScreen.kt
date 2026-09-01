@@ -1,10 +1,23 @@
 package com.easypocket.mobile.ui.products
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +27,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,11 +60,14 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.easypocket.mobile.domain.ListLogic
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.Product
+import com.easypocket.mobile.domain.Store
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
+import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
@@ -57,10 +78,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.rememberHighlightedNewItemId
 import com.easypocket.mobile.ui.components.ListItemRow
+import com.easypocket.mobile.ui.components.SubList
+import com.easypocket.mobile.ui.components.SubListRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
-import com.easypocket.mobile.ui.components.SelectField
-import com.easypocket.mobile.ui.components.SelectOption
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
@@ -81,6 +102,7 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
 
     var searchText by rememberSaveable { mutableStateOf("") }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val backStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(refreshTick) { vm.refresh() }
@@ -112,6 +134,9 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                 language = language,
             )
         } else {
+            val activeCategory = uiState.selectedCategoryId?.let { id ->
+                uiState.categories.firstOrNull { it.id == id }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,15 +149,17 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                     placeholder = t("search.products", language),
                     modifier = Modifier.weight(1f),
                 )
+                Spacer(Modifier.width(8.dp))
+                if (activeCategory != null) {
+                    FilterChipButton(text = activeCategory.name, onClick = { showFilterSheet = true })
+                } else {
+                    IconButtonCircle(
+                        icon = Icons.Default.FilterList,
+                        onClick = { showFilterSheet = true },
+                        variant = ButtonVariant.SECONDARY,
+                    )
+                }
             }
-            Spacer(Modifier.height(8.dp))
-            SelectField(
-                options = categoryFilterOptions(uiState, language),
-                selectedId = uiState.selectedCategoryId,
-                label = t("products.categoryAll", language),
-                onSelect = { id -> vm.setCategoryFilter(id.ifEmpty { null }) },
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -162,6 +189,15 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
             }
         }
     }
+
+    ProductFilterSheet(
+        visible = showFilterSheet,
+        categories = uiState.categories,
+        activeCategoryId = uiState.selectedCategoryId,
+        language = language,
+        onSelectCategory = { id -> vm.setCategoryFilter(id) },
+        onDismiss = { showFilterSheet = false },
+    )
 
     ConfirmSheet(
         visible = showDeleteSheet,
@@ -235,6 +271,7 @@ private fun ProductsList(
         listState = listState,
     ) {
         itemsIndexed(uiState.filtered, key = { _, product -> product.id }) { index, product ->
+            var expanded by rememberSaveable(product.id) { mutableStateOf(false) }
             ListItemRow(
                 onClick = { onProductPress(product.id) },
                 onLongClick = { onProductLongPress(product.id) },
@@ -242,13 +279,24 @@ private fun ProductsList(
                 isLast = index == uiState.filtered.lastIndex,
                 highlighted = product.id == highlightedId,
             ) {
-                ProductCardContent(
-                    product = product,
-                    isSelectionMode = uiState.isSelectionMode,
-                    isSelected = product.id in uiState.selection,
-                    categoryName = uiState.categories.firstOrNull { it.id == product.categoryId }?.name,
-                    language = language,
-                )
+                Column(Modifier.fillMaxWidth()) {
+                    ProductCardContent(
+                        product = product,
+                        isSelectionMode = uiState.isSelectionMode,
+                        isSelected = product.id in uiState.selection,
+                        categoryName = uiState.categories.firstOrNull { it.id == product.categoryId }?.name,
+                        language = language,
+                        expanded = expanded,
+                        onToggleExpanded = { expanded = !expanded },
+                    )
+                    AnimatedVisibility(
+                        visible = expanded && !uiState.isSelectionMode,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        ProductPricesList(product = product, stores = uiState.stores)
+                    }
+                }
             }
         }
     }
@@ -261,6 +309,8 @@ private fun ProductCardContent(
     isSelected: Boolean,
     categoryName: String?,
     language: Language,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
     Row(
@@ -271,34 +321,171 @@ private fun ProductCardContent(
             SelectionCircle(isSelected = isSelected, appColors = appColors)
             Spacer(Modifier.width(8.dp))
         }
-        Text(
-            text = product.productName,
-            color = appColors.text,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (categoryName != null) {
-            Spacer(Modifier.width(6.dp))
-            Tag(text = categoryName, size = TagSize.SM)
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = product.productName,
+                color = appColors.text,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row {
+                if (categoryName != null) {
+                    Tag(text = categoryName, size = TagSize.SM)
+                    Spacer(Modifier.width(6.dp))
+                }
+                Tag(
+                    text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
+                    size = TagSize.SM,
+                )
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        Tag(
-            text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
-            size = TagSize.SM,
+        if (!isSelectionMode && product.prices.isNotEmpty()) {
+            val rotation by animateFloatAsState(
+                targetValue = if (expanded) 180f else 0f,
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                label = "productChevronRotation",
+            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onToggleExpanded),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = appColors.textSecondary,
+                    modifier = Modifier.size(24.dp).graphicsLayer(rotationZ = rotation),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductPricesList(product: Product, stores: List<Store>) {
+    val appColors = LocalAppColors.current
+    SubList(modifier = Modifier.padding(top = 8.dp)) {
+        product.prices.forEachIndexed { index, price ->
+            val storeName = stores.firstOrNull { it.id == price.storeId }?.description ?: price.storeId
+            SubListRow(
+                onClick = {},
+                isFirst = index == 0,
+                isLast = index == product.prices.lastIndex,
+            ) {
+                Text(
+                    text = storeName,
+                    color = appColors.text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "$${formatAmount(price.value)}",
+                    color = appColors.text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+private fun formatAmount(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProductFilterSheet(
+    visible: Boolean,
+    categories: List<Category>,
+    activeCategoryId: String?,
+    language: Language,
+    onSelectCategory: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppBottomSheet(visible = visible, onDismiss = onDismiss, title = t("listDetail.filterTitle", language)) {
+        FilterSectionHeader(t("listDetail.filterCategories", language))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterOptionChip(
+                text = t("listDetail.filterAllCategories", language),
+                selected = activeCategoryId == null,
+                onClick = { onSelectCategory(null) },
+            )
+            categories.forEach { category ->
+                FilterOptionChip(
+                    text = category.name,
+                    selected = activeCategoryId == category.id,
+                    onClick = { onSelectCategory(category.id) },
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun FilterSectionHeader(text: String) {
+    val appColors = LocalAppColors.current
+    Text(
+        text = text,
+        color = appColors.textSecondary,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun FilterOptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val appColors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) appColors.primary else Color.Transparent)
+            .border(1.dp, if (selected) Color.Transparent else appColors.border, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = text,
+            color = if (selected) Color.White else appColors.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
         )
     }
 }
 
-private fun categoryFilterOptions(
-    uiState: ProductListUiState,
-    language: Language,
-): List<SelectOption> = buildList {
-    add(SelectOption(id = "", label = t("products.categoryAll", language)))
-    uiState.categories.forEach { category ->
-        add(SelectOption(id = category.id, label = category.name))
+@Composable
+private fun FilterChipButton(text: String, onClick: () -> Unit) {
+    val appColors = LocalAppColors.current
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(appColors.primary)
+            .clickable(onClick = onClick)
+            .height(IntrinsicSize.Min)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

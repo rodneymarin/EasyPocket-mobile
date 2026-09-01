@@ -131,7 +131,7 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                             Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             tint = appColors.text,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }

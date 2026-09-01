@@ -3,9 +3,11 @@ package com.easypocket.mobile.ui.products
 import androidx.lifecycle.ViewModel
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
+import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
+import com.easypocket.mobile.domain.Store
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.update
 data class ProductListUiState(
     val products: List<Product> = emptyList(),
     val categories: List<Category> = emptyList(),
+    val stores: List<Store> = emptyList(),
     val selectedCategoryId: String? = null,
     val search: String = "",
     val filtered: List<Product> = emptyList(),
@@ -29,6 +32,7 @@ data class ProductListUiState(
 class ProductListViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
     private val categoriesRepository: CategoryRepository,
+    private val storesRepository: StoreRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductListUiState())
@@ -38,9 +42,11 @@ class ProductListViewModel @Inject constructor(
         try {
             val products = productsRepository.getAll()
             val categories = categoriesRepository.getAll()
+            val stores = storesRepository.getAll()
             _uiState.value = _uiState.value.copy(
                 products = products,
                 categories = categories,
+                stores = stores,
                 filtered = filter(products, _uiState.value.search, _uiState.value.selectedCategoryId),
                 isLoading = false,
             )

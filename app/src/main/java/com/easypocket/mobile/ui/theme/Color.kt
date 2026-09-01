@@ -3,7 +3,7 @@ package com.easypocket.mobile.ui.theme
 import androidx.compose.ui.graphics.Color
 
 data class AppColors(
-    val background: Color, val cardBackground: Color, val text: Color,
+    val background: Color, val cardBackground: Color, val subItemBackground: Color, val text: Color,
     val textSecondary: Color, val border: Color, val surface: Color,
     val surfaceText: Color, val primary: Color, val destructive: Color,
     val destructiveBorder: Color, val tabBarInactive: Color,
@@ -13,7 +13,7 @@ data class AppColors(
 )
 
 val LightColors = AppColors(
-    background = Color(0xFFF2F2F6), cardBackground = Color(0xFFFFFFFF),
+    background = Color(0xFFF2F2F6), cardBackground = Color(0xFFFFFFFF), subItemBackground = Color(0xFFF0F0F4),
     text = Color(0xFF000000), textSecondary = Color(0xFF666666),
     border = Color(0xFFE0E0E0), surface = Color(0xFFE9E9EE),
     surfaceText = Color(0xFF333333), primary = Color(0xFF4A5DF9),
@@ -26,7 +26,7 @@ val LightColors = AppColors(
 )
 
 val DarkColors = AppColors(
-    background = Color(0xFF0C0C0E), cardBackground = Color(0xFF1A1A1D),
+    background = Color(0xFF0C0C0E), cardBackground = Color(0xFF1A1A1D), subItemBackground = Color(0xFF242428),
     text = Color(0xFFF5F5F5), textSecondary = Color(0xFFAAAAAA),
     border = Color(0xFF333333), surface = Color(0xFF1F1F23),
     surfaceText = Color(0xFFCCCCCC), primary = Color(0xFF4A5DF9),
