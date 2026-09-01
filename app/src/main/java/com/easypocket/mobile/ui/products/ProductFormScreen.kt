@@ -25,6 +25,7 @@ fun ProductFormScreen(navController: NavController, productId: String) {
     ProductFormContent(
         vm = vm,
         isSheet = false,
+        autoFocusName = productId == "new",
         onSaved = {
             val wasEdit = vm.uiState.value.isEdit
             if (!wasEdit) {

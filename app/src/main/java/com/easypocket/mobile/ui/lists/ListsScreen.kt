@@ -157,6 +157,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
             value = newTitle,
             onValueChange = { newTitle = it },
             placeholder = t("listForm.placeholder", language),
+            autoFocus = true,
         )
         Spacer(Modifier.height(16.dp))
         AppButton(
@@ -302,11 +303,13 @@ private fun ListTitleInput(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    autoFocus: Boolean,
 ) {
     FormTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
+        autoFocus = autoFocus,
     )
 }
 

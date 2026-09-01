@@ -254,6 +254,7 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
         ProductFormContent(
             vm = createProductVm,
             isSheet = true,
+            autoFocusName = true,
             onSaved = {
                 vm.registerProduct(createProductVm.toProduct())
                 showCreateProduct = false

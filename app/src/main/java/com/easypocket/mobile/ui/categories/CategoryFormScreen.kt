@@ -54,6 +54,7 @@ fun CategoryFormScreen(navController: NavController, categoryId: String) {
 
     CategoryFormContent(
         vm = vm,
+        autoFocusName = categoryId == "new",
         onSaved = {
             val wasEdit = vm.uiState.value.isEdit
             if (!wasEdit) {
@@ -77,6 +78,7 @@ fun CategoryFormScreen(navController: NavController, categoryId: String) {
 @Composable
 fun CategoryFormContent(
     vm: CategoryFormViewModel,
+    autoFocusName: Boolean = false,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onCancel: () -> Unit,
@@ -109,6 +111,7 @@ fun CategoryFormContent(
                 value = state.name,
                 onValueChange = vm::setName,
                 placeholder = t("categories.addModal.placeholder", language),
+                autoFocus = autoFocusName,
             )
             Spacer(Modifier.height(24.dp))
         }

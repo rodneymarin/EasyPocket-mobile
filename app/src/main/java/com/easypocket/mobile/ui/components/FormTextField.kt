@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,14 +27,19 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import kotlinx.coroutines.delay
 
 val LocalInputBackground = staticCompositionLocalOf<Color?> { null }
 
@@ -50,10 +57,27 @@ fun FormTextField(
     fontSize: Int = 14,
     trailing: String? = null,
     isError: Boolean = false,
+    autoFocus: Boolean = false,
+    selectAllOnFocus: Boolean = false,
 ) {
     val appColors = LocalAppColors.current
     var isFocused by remember { mutableStateOf(false) }
     val hasValue = value.isNotEmpty()
+    val focusRequester = remember { FocusRequester() }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(value)) }
+
+    SideEffect {
+        if (value != textFieldValue.text) {
+            textFieldValue = TextFieldValue(value, TextRange(value.length))
+        }
+    }
+
+    if (autoFocus) {
+        LaunchedEffect(Unit) {
+            delay(100)
+            runCatching { focusRequester.requestFocus() }
+        }
+    }
 
     Row(
         modifier = modifier
@@ -74,15 +98,26 @@ fun FormTextField(
                 Text(placeholder, color = appColors.placeholderText, fontSize = fontSize.sp)
             }
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+                value = textFieldValue,
+                onValueChange = {
+                    textFieldValue = it
+                    onValueChange(it.text)
+                },
                 singleLine = true,
                 textStyle = TextStyle(color = appColors.text, fontSize = fontSize.sp),
                 cursorBrush = SolidColor(appColors.primary),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 modifier = Modifier
+                    .focusRequester(focusRequester)
                     .fillMaxWidth()
-                    .onFocusChanged { isFocused = it.isFocused },
+                    .onFocusChanged {
+                        isFocused = it.isFocused
+                        if (it.isFocused && selectAllOnFocus && textFieldValue.text.isNotEmpty()) {
+                            textFieldValue = textFieldValue.copy(
+                                selection = TextRange(0, textFieldValue.text.length),
+                            )
+                        }
+                    },
             )
         }
         if (trailing != null) {

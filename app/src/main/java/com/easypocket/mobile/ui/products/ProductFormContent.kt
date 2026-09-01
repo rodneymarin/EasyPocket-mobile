@@ -2,6 +2,8 @@ package com.easypocket.mobile.ui.products
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -60,6 +68,7 @@ import kotlinx.coroutines.launch
 fun ProductFormContent(
     vm: ProductFormViewModel,
     isSheet: Boolean = false,
+    autoFocusName: Boolean = false,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onCancel: () -> Unit,
@@ -69,7 +78,23 @@ fun ProductFormContent(
     val language = LocalLanguage.current
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var rootCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var nameFieldCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val clearFocusOnOtherTap = Modifier
+        .onGloballyPositioned { rootCoordinates = it }
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                val root = rootCoordinates
+                val field = nameFieldCoordinates
+                val tappedNameField = root != null && field != null &&
+                    runCatching { root.localBoundingBoxOf(field) }.getOrNull()
+                        ?.contains(down.position) == true
+                if (!tappedNameField) focusManager.clearFocus()
+            }
+        }
 
     ConfirmSheet(
         visible = showDeleteConfirm,
@@ -87,11 +112,19 @@ fun ProductFormContent(
     if (isSheet) {
         Column(
             modifier = modifier
+                .then(clearFocusOnOtherTap)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .imePadding(),
         ) {
-            ProductFormFields(state = state, vm = vm, language = language, appColors = appColors)
+            ProductFormFields(
+                state = state,
+                vm = vm,
+                language = language,
+                appColors = appColors,
+                autoFocusName = autoFocusName,
+                onNameFieldPositioned = { nameFieldCoordinates = it },
+            )
             Spacer(Modifier.height(24.dp))
             ProductFormActions(
                 state = state,
@@ -101,11 +134,13 @@ fun ProductFormContent(
                 onCancel = onCancel,
                 onDeleteRequest = { showDeleteConfirm = true },
                 language = language,
+                showCancel = false,
             )
         }
     } else {
         Column(
             modifier = modifier
+                .then(clearFocusOnOtherTap)
                 .fillMaxSize()
                 .background(appColors.background)
                 .padding(top = 60.dp),
@@ -120,7 +155,14 @@ fun ProductFormContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
             ) {
-                ProductFormFields(state = state, vm = vm, language = language, appColors = appColors)
+                ProductFormFields(
+                    state = state,
+                    vm = vm,
+                    language = language,
+                    appColors = appColors,
+                    autoFocusName = autoFocusName,
+                    onNameFieldPositioned = { nameFieldCoordinates = it },
+                )
             }
             Column(
                 Modifier
@@ -136,6 +178,7 @@ fun ProductFormContent(
                     onCancel = onCancel,
                     onDeleteRequest = { showDeleteConfirm = true },
                     language = language,
+                    showCancel = true,
                 )
             }
         }
@@ -148,6 +191,8 @@ private fun ProductFormFields(
     vm: ProductFormViewModel,
     language: com.easypocket.mobile.i18n.Language,
     appColors: AppColors,
+    autoFocusName: Boolean,
+    onNameFieldPositioned: (LayoutCoordinates?) -> Unit,
 ) {
     ProductNameInput(
         value = state.name,
@@ -155,6 +200,8 @@ private fun ProductFormFields(
         placeholder = t("products.addModal.namePlaceholder", language),
         isError = state.nameError,
         errorMessage = t("toast.productNameExists", language),
+        autoFocus = autoFocusName,
+        onFieldPositioned = onNameFieldPositioned,
     )
     Spacer(Modifier.height(16.dp))
     FieldLabel(text = t("products.addModal.unitLabel", language))
@@ -165,6 +212,7 @@ private fun ProductFormFields(
         onSelect = { id -> UnitOfMeasurement.fromRaw(id)?.let(vm::setUnit) },
         selectedId = state.unit.raw,
         placeholder = t("products.addModal.unitLabel", language),
+        sheetTitle = t("products.addModal.unitLabel", language),
     )
 
     Spacer(Modifier.height(16.dp))
@@ -180,6 +228,7 @@ private fun ProductFormFields(
         options = categoryOptions,
         onSelect = { id -> vm.setCategoryId(id.ifEmpty { null }) },
         selectedId = state.categoryId ?: "",
+        sheetTitle = t("products.categoryLabel", language),
     )
 
     Spacer(Modifier.height(20.dp))
@@ -195,6 +244,7 @@ private fun ProductFormActions(
     onCancel: () -> Unit,
     onDeleteRequest: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
+    showCancel: Boolean = true,
 ) {
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxWidth()) {
@@ -210,15 +260,18 @@ private fun ProductFormActions(
                     modifier = Modifier.weight(1f),
                 )
             }
-            AppButton(
-                text = t("products.addModal.cancel", language),
-                onClick = onCancel,
-                variant = ButtonVariant.SECONDARY,
-                modifier = Modifier.weight(1f),
-            )
+            if (showCancel) {
+                AppButton(
+                    text = t("products.addModal.cancel", language),
+                    onClick = onCancel,
+                    variant = ButtonVariant.SECONDARY,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             AppButton(
                 text = t("products.addModal.save", language),
                 onClick = { scope.launch { vm.save { onSaved() } } },
+                enabled = state.name.isNotBlank(),
                 modifier = Modifier.weight(1f),
             )
         }
@@ -232,6 +285,8 @@ private fun ProductNameInput(
     placeholder: String,
     isError: Boolean,
     errorMessage: String,
+    autoFocus: Boolean,
+    onFieldPositioned: (LayoutCoordinates?) -> Unit,
 ) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
@@ -240,6 +295,8 @@ private fun ProductNameInput(
             onValueChange = onValueChange,
             placeholder = placeholder,
             isError = isError,
+            autoFocus = autoFocus,
+            modifier = Modifier.onGloballyPositioned { onFieldPositioned(it) },
         )
         if (isError) {
             Spacer(Modifier.height(6.dp))
@@ -333,7 +390,6 @@ private fun PricesSection(
                 newStoreId?.let { vm.addPrice(it, newPriceText) }
                 showAddPrice = false
             },
-            onCancel = { showAddPrice = false },
             language = language,
         )
     }
@@ -353,7 +409,6 @@ private fun PricesSection(
                     vm.updatePrice(editingRow.storeId, newPriceText)
                     editingStoreId = null
                 },
-                onCancel = { editingStoreId = null },
                 language = language,
             )
         }
@@ -417,12 +472,12 @@ private fun PriceCardContent(
         Spacer(Modifier.width(8.dp))
         Box(
             modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .size(40.dp)
+                .clip(RoundedCornerShape(20.dp))
                 .clickable(onClick = onRemove),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Close, contentDescription = "remove price", tint = appColors.textSecondary, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Close, contentDescription = "remove price", tint = appColors.textSecondary, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -433,7 +488,6 @@ private fun PriceEditForm(
     priceText: String,
     onPriceTextChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
 ) {
     Column(Modifier.fillMaxWidth()) {
@@ -441,24 +495,14 @@ private fun PriceEditForm(
             value = priceText,
             onValueChange = onPriceTextChange,
             placeholder = storeName,
+            autoFocus = true,
         )
         Spacer(Modifier.height(16.dp))
-        Row(
+        AppButton(
+            text = t("products.addModal.save", language),
+            onClick = onConfirm,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AppButton(
-                text = t("products.addModal.cancel", language),
-                onClick = onCancel,
-                variant = ButtonVariant.SECONDARY,
-                modifier = Modifier.weight(1f),
-            )
-            AppButton(
-                text = t("products.addModal.save", language),
-                onClick = onConfirm,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        )
     }
 }
 
@@ -470,7 +514,6 @@ private fun AddPriceForm(
     priceText: String,
     onPriceTextChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
 ) {
     Column(Modifier.fillMaxWidth()) {
@@ -488,22 +531,12 @@ private fun AddPriceForm(
             placeholder = t("products.addModal.pricePlaceholder", language),
         )
         Spacer(Modifier.height(16.dp))
-        Row(
+        AppButton(
+            text = t("products.addModal.save", language),
+            onClick = onConfirm,
+            enabled = selectedStoreId != null && priceText.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AppButton(
-                text = t("products.addModal.cancel", language),
-                onClick = onCancel,
-                variant = ButtonVariant.SECONDARY,
-                modifier = Modifier.weight(1f),
-            )
-            AppButton(
-                text = t("products.addModal.save", language),
-                onClick = onConfirm,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        )
     }
 }
 
@@ -512,12 +545,15 @@ private fun DecimalTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    autoFocus: Boolean = false,
 ) {
     FormTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
         keyboardType = KeyboardType.Decimal,
+        selectAllOnFocus = true,
+        autoFocus = autoFocus,
     )
 }
 

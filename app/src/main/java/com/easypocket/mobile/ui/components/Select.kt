@@ -47,6 +47,7 @@ fun SelectField(
     selectedId: String? = null,
     label: String? = null,
     placeholder: String = "",
+    sheetTitle: String? = null,
 ) {
     val appColors = LocalAppColors.current
     var expanded by remember { mutableStateOf(false) }
@@ -83,6 +84,7 @@ fun SelectField(
         SelectOptionDialog(
             options = options,
             selectedId = selectedId,
+            title = sheetTitle,
             onSelect = { id ->
                 onSelect(id)
                 expanded = false
@@ -96,6 +98,7 @@ fun SelectField(
 private fun SelectOptionDialog(
     options: List<SelectOption>,
     selectedId: String?,
+    title: String?,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -104,6 +107,7 @@ private fun SelectOptionDialog(
         visible = true,
         onDismiss = onDismiss,
         heightFraction = 0.5f,
+        title = title,
     ) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             options.forEach { option ->

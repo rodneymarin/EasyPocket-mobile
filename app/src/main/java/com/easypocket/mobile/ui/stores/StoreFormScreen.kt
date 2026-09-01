@@ -65,6 +65,7 @@ fun StoreFormScreen(navController: NavController, storeId: String) {
 
     StoreFormContent(
         vm = vm,
+        autoFocusName = storeId == "new",
         onSaved = {
             val wasEdit = vm.uiState.value.isEdit
             if (!wasEdit) {
@@ -88,6 +89,7 @@ fun StoreFormScreen(navController: NavController, storeId: String) {
 @Composable
 fun StoreFormContent(
     vm: StoreFormViewModel,
+    autoFocusName: Boolean = false,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onCancel: () -> Unit,
@@ -120,6 +122,7 @@ fun StoreFormContent(
                 value = state.name,
                 onValueChange = vm::setName,
                 placeholder = t("stores.addModal.placeholder", language),
+                autoFocus = autoFocusName,
             )
             Spacer(Modifier.height(20.dp))
             FieldLabel(text = t("stores.colorLabel", language))
@@ -181,11 +184,13 @@ private fun StoreNameInput(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    autoFocus: Boolean,
 ) {
     FormTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
+        autoFocus = autoFocus,
     )
 }
 
