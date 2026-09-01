@@ -1,7 +1,7 @@
 package com.easypocket.mobile.domain
 
 data class Store(val id: String, val description: String, val color: Int)
-data class Category(val id: String, val name: String)
+data class Category(val id: String, val name: String, val icon: String = "$")
 data class Price(val storeId: String, val value: Double)
 data class Product(
     val id: String,

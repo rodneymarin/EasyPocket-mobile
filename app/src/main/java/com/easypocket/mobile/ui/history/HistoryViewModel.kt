@@ -57,7 +57,7 @@ data class HistoryUiState(
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    historyRepository: PurchaseHistoryRepository,
+    private val historyRepository: PurchaseHistoryRepository,
     categoriesRepository: CategoryRepository,
 ) : ViewModel() {
 
@@ -79,5 +79,9 @@ class HistoryViewModel @Inject constructor(
 
     fun setRange(days: Int?) {
         _uiState.value = _uiState.value.copy(rangeDays = days)
+    }
+
+    suspend fun deleteRecord(id: String) {
+        historyRepository.delete(id)
     }
 }

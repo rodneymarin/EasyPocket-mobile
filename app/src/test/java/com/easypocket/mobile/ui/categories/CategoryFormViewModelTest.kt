@@ -113,6 +113,51 @@ class CategoryFormViewModelTest {
     }
 
     @Test
+    fun `load with id populates the icon`() = runTest {
+        repos()
+        val created = categoriesRepository.create("Abarrotes", "🛒")
+        val v = vm()
+        v.load(created.id)
+        assertEquals("🛒", v.uiState.value.icon)
+    }
+
+    @Test
+    fun `setIcon updates the form state`() = runTest {
+        repos()
+        val v = vm()
+        v.load(null)
+        v.setIcon("🛒")
+        assertEquals("🛒", v.uiState.value.icon)
+    }
+
+    @Test
+    fun `save creates a category with the selected icon`() = runTest {
+        repos()
+        val v = vm()
+        v.load(null)
+        v.setName("Abarrotes")
+        v.setIcon("🛒")
+        v.save { }
+        assertEquals("🛒", categoriesRepository.getAll().single().icon)
+    }
+
+    @Test
+    fun `save update changes the icon keeping the same id`() = runTest {
+        repos()
+        val created = categoriesRepository.create("Abarrotes", "$")
+        val v = vm()
+        v.load(created.id)
+        v.setName("Abarrotes")
+        v.setIcon("B")
+        var saved = false
+        v.save { saved = true }
+        assertTrue(saved)
+        val stored = categoriesRepository.getAll().single()
+        assertEquals(created.id, stored.id)
+        assertEquals("B", stored.icon)
+    }
+
+    @Test
     fun `delete removes category and clears products`() = runTest {
         repos()
         val created = categoriesRepository.create("Abarrotes")

@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +80,20 @@ fun FormTextField(
         }
     }
 
+    if (selectAllOnFocus) {
+        LaunchedEffect(isFocused) {
+            if (isFocused && textFieldValue.text.isNotEmpty()) {
+                withFrameNanos { }
+                withFrameNanos { }
+                if (isFocused) {
+                    textFieldValue = textFieldValue.copy(
+                        selection = TextRange(0, textFieldValue.text.length),
+                    )
+                }
+            }
+        }
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -112,11 +127,6 @@ fun FormTextField(
                     .fillMaxWidth()
                     .onFocusChanged {
                         isFocused = it.isFocused
-                        if (it.isFocused && selectAllOnFocus && textFieldValue.text.isNotEmpty()) {
-                            textFieldValue = textFieldValue.copy(
-                                selection = TextRange(0, textFieldValue.text.length),
-                            )
-                        }
                     },
             )
         }

@@ -28,6 +28,8 @@ class PurchaseHistoryRepository @Inject constructor(
 
     fun observeAll(): Flow<List<PurchaseHistoryWithItems>> = historyDao.observeAll()
 
+    suspend fun delete(id: String) = historyDao.deleteById(id)
+
     suspend fun archiveCompleted(listId: String, date: Long = System.currentTimeMillis()) {
         db.withTransaction {
             val relation = listDao.getById(listId) ?: return@withTransaction

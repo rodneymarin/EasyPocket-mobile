@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,10 +41,14 @@ import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppHeader
+import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.ListIconCircle
 import com.easypocket.mobile.ui.components.ListItemGroup
 import com.easypocket.mobile.ui.components.ListItemRow
+import com.easypocket.mobile.ui.components.LocalToastState
+import com.easypocket.mobile.ui.components.ToastType
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -58,8 +63,11 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val appColors = LocalAppColors.current
+    val scope = rememberCoroutineScope()
+    val toast = LocalToastState.current
 
     var selectedRecord by remember { mutableStateOf<PurchaseHistoryWithItems?>(null) }
+    var recordToDelete by remember { mutableStateOf<PurchaseHistoryWithItems?>(null) }
 
     Column(
         modifier = Modifier
@@ -123,6 +131,7 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
                             records = uiState.filteredRecords,
                             language = language,
                             onRecordPress = { selectedRecord = it },
+                            onRecordLongPress = { recordToDelete = it },
                         )
                     }
                 }
@@ -138,6 +147,26 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
         },
         language = language,
         onDismiss = { selectedRecord = null },
+    )
+
+    ConfirmSheet(
+        visible = recordToDelete != null,
+        title = t("history.deleteModal.title", language),
+        message = recordToDelete?.record?.listTitle?.let { title ->
+            t("history.deleteModal.confirmMessage", language, mapOf("list" to title))
+        } ?: "",
+        confirmLabel = t("history.deleteModal.confirm", language),
+        onConfirm = {
+            val id = recordToDelete?.record?.id
+            recordToDelete = null
+            if (id != null) {
+                scope.launch {
+                    vm.deleteRecord(id)
+                    toast.show(t("toast.historyDeleted", language), ToastType.SUCCESS)
+                }
+            }
+        },
+        onDismiss = { recordToDelete = null },
     )
 }
 
@@ -182,6 +211,7 @@ private fun RecordsList(
     records: List<PurchaseHistoryWithItems>,
     language: Language,
     onRecordPress: (PurchaseHistoryWithItems) -> Unit,
+    onRecordLongPress: (PurchaseHistoryWithItems) -> Unit,
 ) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
@@ -191,6 +221,7 @@ private fun RecordsList(
             records.forEachIndexed { index, record ->
                 ListItemRow(
                     onClick = { onRecordPress(record) },
+                    onLongClick = { onRecordLongPress(record) },
                     isFirst = index == 0,
                     isLast = index == records.lastIndex,
                 ) {

@@ -9,6 +9,7 @@ import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
+import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
@@ -80,7 +81,7 @@ data class ListDetailUiState(
     val filterStores: List<Store>
         get() {
             val usedIds = list?.items?.mapNotNull { it.storeId }?.toSet() ?: emptySet()
-            return stores.filter { it.id in usedIds }.sortedBy { ListLogic.normalize(it.description) }
+            return stores.filter { it.id in usedIds }.sortedWith(Alphabet.comparator { it.description })
         }
 
     val filterCategories: List<Category>
@@ -90,7 +91,7 @@ data class ListDetailUiState(
                 ?.toSet() ?: emptySet()
             return categoriesById.values
                 .filter { it.id in usedIds }
-                .sortedBy { ListLogic.normalize(it.name) }
+                .sortedWith(Alphabet.comparator { it.name })
         }
 }
 

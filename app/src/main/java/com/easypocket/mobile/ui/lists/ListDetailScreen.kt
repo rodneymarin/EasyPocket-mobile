@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,13 +48,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -580,7 +585,7 @@ private fun FilterSheet(
             )
             categories.forEach { category ->
                 FilterOptionChip(
-                    text = category.name,
+                    text = "${category.icon} ${category.name}",
                     selected = activeCategoryId == category.id,
                     onClick = { onSelectCategory(category.id) },
                 )
@@ -720,7 +725,7 @@ private fun ItemsList(
                     item(key = "done-section") {
                         DoneSectionHeader(language = language)
                     }
-                    itemsIndexed(uiState.doneItems, key = { _, item -> item.id }) { index, item ->
+                    itemsIndexed(uiState.doneItems, key = { _, item -> "done_${item.id}" }) { index, item ->
                         ListItemRow(
                             onClick = { onItemPress(item) },
                             onLongClick = { onItemLongPress(item) },
@@ -799,7 +804,10 @@ private fun DetailItemCardContent(
                     Icons.Default.PushPin,
                     contentDescription = null,
                     tint = appColors.primary,
-                    modifier = Modifier.align(Alignment.TopEnd).size(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 10.dp, y = (-3).dp)
+                        .size(16.dp),
                 )
             }
             Row(
@@ -828,7 +836,7 @@ private fun DetailItemCardContent(
                         if (store != null) {
                             Tag(
                                 text = store.description,
-                                color = StoreColors.get(store.color, isDark),
+                                color = if (item.done) null else StoreColors.get(store.color, isDark),
                                 size = TagSize.SM,
                             )
                         } else {
@@ -837,7 +845,15 @@ private fun DetailItemCardContent(
                         val category = product?.categoryId?.let { categoriesById[it] }
                         if (category != null) {
                             Spacer(Modifier.width(6.dp))
-                            Tag(text = category.name, size = TagSize.SM)
+                            if (item.done) {
+                                Tag(
+                                    text = category.name,
+                                    size = TagSize.SM,
+                                    leading = { DesaturatedEmoji(emoji = category.icon, fontSize = 11.sp) },
+                                )
+                            } else {
+                                Tag(text = "${category.icon} ${category.name}", size = TagSize.SM)
+                            }
                         }
                     }
                 }
@@ -854,6 +870,31 @@ private fun DetailItemCardContent(
                     CheckCircle(done = item.done, onToggle = onToggleDone, textColor = appColors.primary)
                 }
             }
+    }
+}
+
+@Composable
+private fun DesaturatedEmoji(emoji: String, fontSize: TextUnit) {
+    val density = LocalDensity.current
+    val textSizePx = with(density) { fontSize.toPx() }
+    val paint = remember(textSizePx) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.textSize = textSizePx
+            colorFilter = android.graphics.ColorMatrixColorFilter(
+                android.graphics.ColorMatrix().apply { setSaturation(0f) },
+            )
+        }
+    }
+    val widthPx = remember(emoji, textSizePx) { paint.measureText(emoji) }
+    val ascent = paint.fontMetrics.ascent
+    val heightPx = paint.fontMetrics.descent - ascent
+    Canvas(
+        modifier = Modifier.size(
+            with(density) { widthPx.toDp() },
+            with(density) { heightPx.toDp() },
+        ),
+    ) {
+        drawContext.canvas.nativeCanvas.drawText(emoji, 0f, -ascent, paint)
     }
 }
 
@@ -928,16 +969,17 @@ private fun RenameSheet(
         heightFraction = 0.75f,
         title = t("listForm.editTitle", language),
     ) {
-        ListIconField(
-            value = icon,
-            onValueChange = onIconChange,
-            placeholder = t("listForm.icon", language),
-        )
-        Spacer(Modifier.height(16.dp))
         DetailTitleInput(
             value = input,
             onValueChange = onInputChange,
             placeholder = t("listForm.placeholder", language),
+            autoFocus = true,
+        )
+        Spacer(Modifier.height(16.dp))
+        ListIconField(
+            value = icon,
+            onValueChange = onIconChange,
+            placeholder = t("listForm.icon", language),
         )
         Spacer(Modifier.height(16.dp))
         AppButton(
@@ -954,11 +996,13 @@ private fun DetailTitleInput(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    autoFocus: Boolean = false,
 ) {
     FormTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
+        autoFocus = autoFocus,
     )
 }
 

@@ -5,7 +5,9 @@ import com.easypocket.mobile.data.local.CategoryDao
 import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductDao
+import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
+import com.easypocket.mobile.domain.ListIcon
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
@@ -20,7 +22,8 @@ class CategoryRepository @Inject constructor(
     private val productDao: ProductDao,
 ) {
 
-    fun observeAll(): Flow<List<Category>> = categoryDao.getAll().map { list -> list.map { it.toDomain() } }
+    fun observeAll(): Flow<List<Category>> =
+        categoryDao.getAll().map { list -> list.map { it.toDomain() }.sortedWith(Alphabet.comparator { it.name }) }
 
     suspend fun getAll(): List<Category> = observeAll().first()
 
@@ -29,13 +32,15 @@ class CategoryRepository @Inject constructor(
         return if (found.id == excludeId) null else found.toDomain()
     }
 
-    suspend fun create(name: String): Category {
+    suspend fun create(name: String, icon: String = ListIcon.DEFAULT): Category {
         val id = generateUniqueCode()
-        categoryDao.insert(CategoryEntity(id, name))
-        return Category(id, name)
+        val safeIcon = icon.ifBlank { ListIcon.DEFAULT }
+        categoryDao.insert(CategoryEntity(id, name, safeIcon))
+        return Category(id, name, safeIcon)
     }
 
-    suspend fun update(category: Category) = categoryDao.update(CategoryEntity(category.id, category.name))
+    suspend fun update(category: Category) =
+        categoryDao.update(CategoryEntity(category.id, category.name, category.icon))
 
     suspend fun deleteAll(ids: List<String>) {
         db.withTransaction {
@@ -52,7 +57,7 @@ class CategoryRepository @Inject constructor(
         }
     }
 
-    private fun CategoryEntity.toDomain() = Category(id, name)
+    private fun CategoryEntity.toDomain() = Category(id, name, icon)
 
     companion object {
         private const val CODE_LENGTH = 6

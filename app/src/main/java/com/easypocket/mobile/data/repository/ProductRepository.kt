@@ -4,6 +4,7 @@ import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductDao
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.UnitOfMeasurement
@@ -28,7 +29,7 @@ class ProductRepository @Inject constructor(
                 prices[p.id].orEmpty().map { Price(it.storeId, it.value) },
                 p.categoryId,
             )
-        }
+        }.sortedWith(Alphabet.comparator { it.productName })
     }
 
     suspend fun getByName(name: String): Product? {

@@ -27,6 +27,7 @@ data class BackupStore(
 data class BackupCategory(
     val id: String,
     val name: String,
+    val icon: String = "$",
 )
 
 @Serializable

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
+import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
@@ -157,7 +158,7 @@ class ItemFormViewModel @Inject constructor(
         }
         _uiState.update {
             it.copy(
-                products = updated.sortedBy { p -> ListLogic.normalize(p.productName) },
+                products = updated.sortedWith(Alphabet.comparator { it.productName }),
                 productId = product.id,
             )
         }

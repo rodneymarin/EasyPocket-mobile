@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.data.local.StoreEntity
@@ -119,5 +121,31 @@ class PurchaseHistoryRepositoryTest {
 
         assertTrue(repo.observeAll().first().isEmpty())
         assertEquals(1, db.listDao().getById("l1")!!.items.size)
+    }
+
+    @Test
+    fun `delete removes the record and cascades its items`() = runTest {
+        db.purchaseHistoryDao().insertHistory(PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1))
+        db.purchaseHistoryDao().insertItems(
+            listOf(
+                PurchaseHistoryItemEntity(
+                    historyId = "h1", productName = "Milk", storeName = null,
+                    quantity = 2.0, unitPrice = 10.0, totalPrice = 20.0, itemUid = "uid-1",
+                )
+            )
+        )
+
+        repo.delete("h1")
+
+        assertTrue(repo.observeAll().first().isEmpty())
+    }
+
+    @Test
+    fun `delete with unknown id does nothing`() = runTest {
+        db.purchaseHistoryDao().insertHistory(PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1))
+
+        repo.delete("nope")
+
+        assertEquals(1, repo.observeAll().first().size)
     }
 }

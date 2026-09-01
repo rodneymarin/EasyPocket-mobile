@@ -284,7 +284,7 @@ private fun ProductsList(
                         product = product,
                         isSelectionMode = uiState.isSelectionMode,
                         isSelected = product.id in uiState.selection,
-                        categoryName = uiState.categories.firstOrNull { it.id == product.categoryId }?.name,
+                        category = uiState.categories.firstOrNull { it.id == product.categoryId },
                         language = language,
                         expanded = expanded,
                         onToggleExpanded = { expanded = !expanded },
@@ -307,7 +307,7 @@ private fun ProductCardContent(
     product: Product,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    categoryName: String?,
+    category: Category?,
     language: Language,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
@@ -332,8 +332,8 @@ private fun ProductCardContent(
             )
             Spacer(Modifier.height(4.dp))
             Row {
-                if (categoryName != null) {
-                    Tag(text = categoryName, size = TagSize.SM)
+                if (category != null) {
+                    Tag(text = "${category.icon} ${category.name}", size = TagSize.SM)
                     Spacer(Modifier.width(6.dp))
                 }
                 Tag(
@@ -423,7 +423,7 @@ private fun ProductFilterSheet(
             )
             categories.forEach { category ->
                 FilterOptionChip(
-                    text = category.name,
+                    text = "${category.icon} ${category.name}",
                     selected = activeCategoryId == category.id,
                     onClick = { onSelectCategory(category.id) },
                 )

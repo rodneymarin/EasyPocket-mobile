@@ -38,7 +38,7 @@ fun HomePagerScreen(
 
     LaunchedEffect(selectedPage) {
         if (pagerState.currentPage != selectedPage) {
-            pagerState.animateScrollToPage(selectedPage)
+            pagerState.scrollToPage(selectedPage)
         }
     }
 

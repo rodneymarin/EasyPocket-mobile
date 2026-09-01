@@ -10,8 +10,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -41,6 +45,7 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
     var selectedPage by rememberSaveable { mutableIntStateOf(0) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val isHome = backStackEntry?.destination?.route == "home"
+    val instantNav = remember { InstantNavRequest() }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -51,6 +56,7 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
                 onPageSelected = { target ->
                     selectedPage = target
                     if (!isHome) {
+                        instantNav.skipNext = true
                         navController.popBackStack("home", inclusive = false)
                     }
                 },
@@ -62,10 +68,18 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
             NavHost(
                 navController = navController,
                 startDestination = "home",
-                enterTransition = { slideInHorizontally { it } },
-                exitTransition = { slideOutHorizontally { -it } },
-                popEnterTransition = { slideInHorizontally { -it } },
-                popExitTransition = { slideOutHorizontally { it } },
+                enterTransition = {
+                    if (instantNav.skipNext) EnterTransition.None else slideInHorizontally { it }
+                },
+                exitTransition = {
+                    if (instantNav.skipNext) ExitTransition.None else slideOutHorizontally { -it }
+                },
+                popEnterTransition = {
+                    if (instantNav.skipNext) EnterTransition.None else slideInHorizontally { -it }
+                },
+                popExitTransition = {
+                    if (instantNav.skipNext) ExitTransition.None else slideOutHorizontally { it }
+                },
             ) {
                 composable("home") {
                     HomePagerScreen(
@@ -99,4 +113,10 @@ fun AppNavHost(navController: NavHostController, vm: AppViewModel) {
             }
         }
     }
+
+    LaunchedEffect(backStackEntry) { instantNav.skipNext = false }
+}
+
+private class InstantNavRequest {
+    var skipNext = false
 }

@@ -147,17 +147,17 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
         heightFraction = 0.75f,
         title = t("listForm.newTitle", language),
     ) {
-        ListIconField(
-            value = newIcon,
-            onValueChange = { newIcon = it },
-            placeholder = t("listForm.icon", language),
-        )
-        Spacer(Modifier.height(16.dp))
         ListTitleInput(
             value = newTitle,
             onValueChange = { newTitle = it },
             placeholder = t("listForm.placeholder", language),
             autoFocus = true,
+        )
+        Spacer(Modifier.height(16.dp))
+        ListIconField(
+            value = newIcon,
+            onValueChange = { newIcon = it },
+            placeholder = t("listForm.icon", language),
         )
         Spacer(Modifier.height(16.dp))
         AppButton(

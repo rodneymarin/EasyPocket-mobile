@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,6 +67,40 @@ class HistoryViewModelTest {
         assertEquals(30, vm.uiState.value.rangeDays)
         vm.setRange(null)
         assertEquals(null, vm.uiState.value.rangeDays)
+    }
+
+    @Test
+    fun `deleteRecord removes the record from state`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
+            .allowMainThreadQueries().build()
+        val repo = PurchaseHistoryRepository(
+            db = db,
+            historyDao = db.purchaseHistoryDao(),
+            listDao = db.listDao(),
+            productDao = db.productDao(),
+            priceDao = db.priceDao(),
+            storeDao = db.storeDao(),
+        )
+        db.purchaseHistoryDao().insertHistory(
+            PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)
+        )
+        val vm = HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.productDao()))
+        awaitRecordCount(vm, 1)
+
+        vm.deleteRecord("h1")
+
+        awaitRecordCount(vm, 0)
+    }
+
+    private fun awaitRecordCount(vm: HistoryViewModel, count: Int) {
+        val deadline = System.currentTimeMillis() + 5000
+        while (System.currentTimeMillis() < deadline) {
+            if (vm.uiState.value.records.size == count) return
+            Thread.sleep(20)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+        }
+        assertEquals(count, vm.uiState.value.records.size)
     }
 
     @Test

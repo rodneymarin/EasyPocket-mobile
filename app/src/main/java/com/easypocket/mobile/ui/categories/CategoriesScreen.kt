@@ -52,6 +52,7 @@ import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.IconButtonCircle
+import com.easypocket.mobile.ui.components.ListIconCircle
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
@@ -248,6 +249,8 @@ private fun CategoryCardContent(
             SelectionCircle(isSelected = isSelected, appColors = appColors)
             Spacer(Modifier.width(8.dp))
         }
+        ListIconCircle(icon = category.icon, modifier = Modifier.size(40.dp))
+        Spacer(Modifier.width(12.dp))
         Text(
             text = category.name,
             color = appColors.text,

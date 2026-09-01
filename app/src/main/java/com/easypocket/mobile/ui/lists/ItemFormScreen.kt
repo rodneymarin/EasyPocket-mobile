@@ -171,6 +171,7 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                 placeholder = "0",
                 keyboardType = KeyboardType.Decimal,
                 fontSize = 15,
+                selectAllOnFocus = true,
                 trailing = uiState.unitLabelKey?.let { key ->
                     t(key, language).let { label -> if (label != key) label else key.removePrefix("unit.") }
                 },

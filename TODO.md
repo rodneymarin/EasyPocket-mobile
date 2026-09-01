@@ -1,3 +1,4 @@
+- Corregir tildes para orden alfabetico
 - Agregar iconos a las categorias.
 - Mover productos a otra lista.
 - Agregar productos a lista desde maestro de productos.

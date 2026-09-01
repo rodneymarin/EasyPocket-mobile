@@ -30,6 +30,7 @@ object AppModule {
                 EasyPocketDatabase.MIGRATION_2_3,
                 EasyPocketDatabase.MIGRATION_3_4,
                 EasyPocketDatabase.MIGRATION_4_5,
+                EasyPocketDatabase.MIGRATION_5_6,
             )
             .fallbackToDestructiveMigration()
             .build()

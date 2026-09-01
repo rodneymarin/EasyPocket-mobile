@@ -35,6 +35,7 @@ import com.easypocket.mobile.ui.components.ButtonVariant
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.FormTextField
+import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
 import com.easypocket.mobile.ui.theme.LocalAppColors
@@ -112,6 +113,12 @@ fun CategoryFormContent(
                 onValueChange = vm::setName,
                 placeholder = t("categories.addModal.placeholder", language),
                 autoFocus = autoFocusName,
+            )
+            Spacer(Modifier.height(16.dp))
+            ListIconField(
+                value = state.icon,
+                onValueChange = vm::setIcon,
+                placeholder = t("categories.icon", language),
             )
             Spacer(Modifier.height(24.dp))
         }

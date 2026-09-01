@@ -38,6 +38,27 @@ class RepositoriesTest {
     fun tearDown() { db.close() }
 
     @Test
+    fun `stores products and lists sort accents the spanish way`() = runTest {
+        stores.create("Zapatería")
+        stores.create("Ácido")
+        stores.create("Ñandú")
+
+        assertEquals(listOf("Ácido", "Ñandú", "Zapatería"), stores.getAll().map { it.description })
+
+        products.create("Zanahoria", UnitOfMeasurement.UNIT)
+        products.create("Azúcar", UnitOfMeasurement.UNIT)
+        products.create("Ñame", UnitOfMeasurement.UNIT)
+
+        assertEquals(listOf("Azúcar", "Ñame", "Zanahoria"), products.getAll().map { it.productName })
+
+        lists.create("Útiles")
+        lists.create("Bodega")
+        lists.create("Ítem")
+
+        assertEquals(listOf("Bodega", "Ítem", "Útiles"), lists.getAll().map { it.title })
+    }
+
+    @Test
     fun `create store and update`() = runTest {
         val store = stores.create("Demo Store")
         stores.update(store.copy(description = "Renamed", color = 3))

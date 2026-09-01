@@ -221,7 +221,7 @@ private fun ProductFormFields(
     val categoryOptions = buildList {
         add(SelectOption(id = "", label = t("products.categoryNone", language)))
         state.availableCategories.forEach { category ->
-            add(SelectOption(id = category.id, label = category.name))
+            add(SelectOption(id = category.id, label = "${category.icon} ${category.name}"))
         }
     }
     SelectField(

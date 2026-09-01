@@ -3,6 +3,7 @@ package com.easypocket.mobile.ui.categories
 import androidx.lifecycle.ViewModel
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.domain.Category
+import com.easypocket.mobile.domain.ListIcon
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.update
 data class CategoryFormUiState(
     val category: Category? = null,
     val name: String = "",
+    val icon: String = "",
     val isEdit: Boolean = false,
     val nameError: Boolean = false,
 )
@@ -32,7 +34,7 @@ class CategoryFormViewModel @Inject constructor(
         }
         val category = categoriesRepository.getAll().firstOrNull { it.id == categoryId }
         if (category != null) {
-            _uiState.value = CategoryFormUiState(category = category, name = category.name, isEdit = true)
+            _uiState.value = CategoryFormUiState(category = category, name = category.name, icon = category.icon, isEdit = true)
         } else {
             _uiState.value = CategoryFormUiState(isEdit = true)
         }
@@ -40,6 +42,10 @@ class CategoryFormViewModel @Inject constructor(
 
     fun setName(name: String) {
         _uiState.update { it.copy(name = name, nameError = false) }
+    }
+
+    fun setIcon(icon: String) {
+        _uiState.update { it.copy(icon = icon) }
     }
 
     suspend fun save(onSaved: (String?) -> Unit) {
@@ -55,11 +61,11 @@ class CategoryFormViewModel @Inject constructor(
         }
         var savedId: String? = null
         if (state.isEdit && state.category != null) {
-            val updated = state.category.copy(name = name)
+            val updated = state.category.copy(name = name, icon = state.icon.ifBlank { ListIcon.DEFAULT })
             categoriesRepository.update(updated)
             _uiState.update { it.copy(category = updated, nameError = false) }
         } else {
-            val created = categoriesRepository.create(name)
+            val created = categoriesRepository.create(name, state.icon)
             _uiState.update { it.copy(category = created, nameError = false) }
             savedId = created.id
         }

@@ -55,12 +55,38 @@ class CategoryRepositoryTest {
     }
 
     @Test
-    fun `getAll returns categories ordered by name`() = runTest {
-        repo.create("Zapallos")
-        repo.create("Abarrotes")
-        repo.create("Bebidas")
+    fun `create stores the provided icon`() = runTest {
+        repo.create("Abarrotes", "🛒")
 
-        assertEquals(listOf("Abarrotes", "Bebidas", "Zapallos"), repo.getAll().map { it.name })
+        assertEquals("🛒", repo.getAll().single().icon)
+    }
+
+    @Test
+    fun `create defaults to dollar icon when none provided`() = runTest {
+        repo.create("Abarrotes")
+        repo.create("Bebidas", "")
+
+        assertEquals("$", repo.getAll().first { it.name == "Abarrotes" }.icon)
+        assertEquals("$", repo.getAll().first { it.name == "Bebidas" }.icon)
+    }
+
+    @Test
+    fun `update persists icon changes`() = runTest {
+        val created = repo.create("Abarrotes", "$")
+
+        repo.update(created.copy(icon = "🛒"))
+
+        assertEquals("🛒", repo.getAll().single().icon)
+    }
+
+    @Test
+    fun `getAll returns categories ordered alphabetically for spanish speakers`() = runTest {
+        repo.create("Zapallos")
+        repo.create("Árbol")
+        repo.create("Año")
+        repo.create("Anillo")
+
+        assertEquals(listOf("Anillo", "Año", "Árbol", "Zapallos"), repo.getAll().map { it.name })
     }
 
     @Test

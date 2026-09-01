@@ -284,6 +284,34 @@ class DatabaseTest {
     }
 
     @Test
+    fun `migration 5 to 6 adds icon with default dollar for existing categories`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(5) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE categories (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL)")
+                        db.execSQL("CREATE INDEX index_categories_name ON categories (name)")
+                        db.execSQL("INSERT INTO categories (id, name) VALUES ('ABC123', 'Abarrotes')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_5_6.migrate(db)
+
+        db.query("SELECT icon FROM categories WHERE id = 'ABC123'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("$", cursor.getString(0))
+        }
+        helper.close()
+    }
+
+    @Test
     fun `delete history record cascades items`() = runTest {
         db.purchaseHistoryDao().insertHistory(
             PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)

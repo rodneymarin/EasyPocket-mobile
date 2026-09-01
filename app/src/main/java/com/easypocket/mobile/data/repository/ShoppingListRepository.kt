@@ -4,6 +4,7 @@ import com.easypocket.mobile.data.local.ShoppingListDao
 import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.data.local.ShoppingListWithItems
+import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.ListIcon
 import com.easypocket.mobile.domain.ShoppingList
 import com.easypocket.mobile.domain.ShoppingListItem
@@ -23,7 +24,7 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
             relation.items.map { ShoppingListItem(it.id, it.productId, it.quantity, it.storeId, it.done, it.pinned) },
         )
 
-    suspend fun getAll(): List<ShoppingList> = listDao.getAll().first().map(::withItems)
+    suspend fun getAll(): List<ShoppingList> = listDao.getAll().first().map(::withItems).sortedWith(Alphabet.comparator { it.title })
 
     suspend fun getById(id: String): ShoppingList? = listDao.getById(id)?.let(::withItems)
 

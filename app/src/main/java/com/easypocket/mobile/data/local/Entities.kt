@@ -17,6 +17,7 @@ data class StoreEntity(
 data class CategoryEntity(
     @PrimaryKey val id: String,
     val name: String,
+    @ColumnInfo(name = "icon", defaultValue = "$") val icon: String = "$",
 )
 
 @Entity(tableName = "products", indices = [Index("product_name")])

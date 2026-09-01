@@ -169,6 +169,30 @@ class BackupManagerTest {
     }
 
     @Test
+    fun `export and import preserve category icon`() = runTest {
+        db.categoryDao().insert(CategoryEntity("ABC123", "Abarrotes", "🛒"))
+
+        val json = manager.exportToString()
+        db.clearAllTables()
+        manager.importData(manager.parse(json).getOrThrow())
+
+        assertEquals("🛒", db.categoryDao().getById("ABC123")!!.icon)
+    }
+
+    @Test
+    fun `import backup without category icon defaults to dollar`() = runTest {
+        val oldBackupJson = """
+            {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
+             "categories":[{"id":"ABC123","name":"Abarrotes"}],
+             "shoppingLists":[],"listItems":[]}
+        """.trimIndent()
+
+        manager.importData(manager.parse(oldBackupJson).getOrThrow())
+
+        assertEquals("$", db.categoryDao().getById("ABC123")!!.icon)
+    }
+
+    @Test
     fun `export and import preserve categories and category codes`() = runTest {
         db.categoryDao().insert(CategoryEntity("ABC123", "Abarrotes"))
         db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
