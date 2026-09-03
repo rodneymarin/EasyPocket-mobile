@@ -53,6 +53,23 @@ object ListLogic {
         return pending + done
     }
 
+    fun groupedSections(
+        items: List<ShoppingListItem>,
+        productsById: Map<String, Product>,
+        categoriesById: Map<String, Category>,
+    ): List<ItemSection> {
+        fun sortGroup(group: List<ShoppingListItem>): List<ShoppingListItem> = group.sortedWith(
+            compareByDescending<ShoppingListItem> { it.pinned }
+                .thenBy { normalize(productsById[it.productId]?.productName ?: "") },
+        )
+        val groups = items.groupBy { productsById[it.productId]?.categoryId }
+        val sections = groups.filterKeys { it != null }.map { (categoryId, group) ->
+            ItemSection(categoriesById[categoryId], sortGroup(group))
+        }.sortedWith(Alphabet.comparator { it.category?.name ?: "" })
+        val withoutCategory = groups[null]?.let { listOf(ItemSection(null, sortGroup(it))) } ?: emptyList()
+        return sections + withoutCategory
+    }
+
     fun unitLabelKey(unit: UnitOfMeasurement, quantity: Double): String =
         if (quantity > 1.0) "unit.${unit.raw}.plural" else "unit.${unit.raw}"
 

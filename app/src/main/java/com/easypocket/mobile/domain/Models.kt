@@ -24,3 +24,4 @@ data class ShoppingList(
     val icon: String = "$",
     val items: List<ShoppingListItem> = emptyList(),
 )
+data class ItemSection(val category: Category?, val items: List<ShoppingListItem>)

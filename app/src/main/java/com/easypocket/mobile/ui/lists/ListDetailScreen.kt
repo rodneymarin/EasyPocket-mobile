@@ -1,7 +1,6 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,16 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -700,25 +696,33 @@ private fun ItemsList(
                 EmptyMessage(t("listDetail.noFilterMatch", language))
             }
             else -> {
-                itemsIndexed(uiState.pendingItems, key = { _, item -> item.id }) { index, item ->
-                    ListItemRow(
-                        onClick = { onItemPress(item) },
-                        onLongClick = { onItemLongPress(item) },
-                        isFirst = index == 0,
-                        isLast = index == uiState.pendingItems.lastIndex,
-                        backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
-                        highlighted = item.id == highlightedItemId,
-                    ) {
-                        DetailItemCardContent(
-                            item = item,
-                            productsById = uiState.productsById,
-                            categoriesById = uiState.categoriesById,
-                            stores = uiState.stores,
-                            isSelectionMode = uiState.isSelectionMode,
-                            isSelected = item.id in uiState.selection,
-                            language = language,
-                            onToggleDone = { onToggleDone(item) },
-                        )
+                uiState.pendingSections.forEach { section ->
+                    section.category?.let { category ->
+                        item(key = "category_${category.id}") {
+                            CategorySectionHeader(icon = category.icon, name = category.name)
+                        }
+                    } ?: item(key = "category_none") {
+                        CategorySectionHeader(icon = null, name = t("listDetail.noCategory", language))
+                    }
+                    itemsIndexed(section.items, key = { _, item -> item.id }) { index, item ->
+                        ListItemRow(
+                            onClick = { onItemPress(item) },
+                            onLongClick = { onItemLongPress(item) },
+                            isFirst = index == 0,
+                            isLast = index == section.items.lastIndex,
+                            backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                            highlighted = item.id == highlightedItemId,
+                        ) {
+                            DetailItemCardContent(
+                                item = item,
+                                productsById = uiState.productsById,
+                                stores = uiState.stores,
+                                isSelectionMode = uiState.isSelectionMode,
+                                isSelected = item.id in uiState.selection,
+                                language = language,
+                                onToggleDone = { onToggleDone(item) },
+                            )
+                        }
                     }
                 }
                 if (hasDone) {
@@ -736,7 +740,6 @@ private fun ItemsList(
                             DetailItemCardContent(
                                 item = item,
                                 productsById = uiState.productsById,
-                                categoriesById = uiState.categoriesById,
                                 stores = uiState.stores,
                                 isSelectionMode = uiState.isSelectionMode,
                                 isSelected = item.id in uiState.selection,
@@ -752,9 +755,36 @@ private fun ItemsList(
 }
 
 @Composable
+private fun CategorySectionHeader(icon: String?, name: String) {
+    val appColors = LocalAppColors.current
+    Column(Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Text(text = icon, fontSize = 13.sp)
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(
+                text = name,
+                color = appColors.textSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+    }
+}
+
+@Composable
 private fun DoneSectionHeader(language: Language) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(16.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(appColors.border))
         Spacer(Modifier.height(8.dp))
         Text(
             text = t("listDetail.doneSection", language),
@@ -780,7 +810,6 @@ private fun EmptyMessage(text: String) {
 private fun DetailItemCardContent(
     item: ShoppingListItem,
     productsById: Map<String, Product>,
-    categoriesById: Map<String, Category>,
     stores: List<Store>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
@@ -842,19 +871,6 @@ private fun DetailItemCardContent(
                         } else {
                             StorelessTag(text = t("listDetail.noStore", language), appColors = appColors)
                         }
-                        val category = product?.categoryId?.let { categoriesById[it] }
-                        if (category != null) {
-                            Spacer(Modifier.width(6.dp))
-                            if (item.done) {
-                                Tag(
-                                    text = category.name,
-                                    size = TagSize.SM,
-                                    leading = { DesaturatedEmoji(emoji = category.icon, fontSize = 11.sp) },
-                                )
-                            } else {
-                                Tag(text = "${category.icon} ${category.name}", size = TagSize.SM)
-                            }
-                        }
                     }
                 }
                 Spacer(Modifier.width(6.dp))
@@ -870,31 +886,6 @@ private fun DetailItemCardContent(
                     CheckCircle(done = item.done, onToggle = onToggleDone, textColor = appColors.primary)
                 }
             }
-    }
-}
-
-@Composable
-private fun DesaturatedEmoji(emoji: String, fontSize: TextUnit) {
-    val density = LocalDensity.current
-    val textSizePx = with(density) { fontSize.toPx() }
-    val paint = remember(textSizePx) {
-        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.textSize = textSizePx
-            colorFilter = android.graphics.ColorMatrixColorFilter(
-                android.graphics.ColorMatrix().apply { setSaturation(0f) },
-            )
-        }
-    }
-    val widthPx = remember(emoji, textSizePx) { paint.measureText(emoji) }
-    val ascent = paint.fontMetrics.ascent
-    val heightPx = paint.fontMetrics.descent - ascent
-    Canvas(
-        modifier = Modifier.size(
-            with(density) { widthPx.toDp() },
-            with(density) { heightPx.toDp() },
-        ),
-    ) {
-        drawContext.canvas.nativeCanvas.drawText(emoji, 0f, -ascent, paint)
     }
 }
 

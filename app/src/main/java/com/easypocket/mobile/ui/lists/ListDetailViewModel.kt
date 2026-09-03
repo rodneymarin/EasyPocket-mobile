@@ -11,6 +11,7 @@ import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
+import com.easypocket.mobile.domain.ItemSection
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.ShoppingList
@@ -60,6 +61,9 @@ data class ListDetailUiState(
 
     val pendingItems: List<ShoppingListItem>
         get() = filteredItems.filter { !it.done }
+
+    val pendingSections: List<ItemSection>
+        get() = list?.let { ListLogic.groupedSections(pendingItems, productsById, categoriesById) } ?: emptyList()
 
     val doneItems: List<ShoppingListItem>
         get() = filteredItems.filter { it.done }
