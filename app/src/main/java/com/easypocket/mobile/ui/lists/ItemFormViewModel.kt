@@ -12,6 +12,7 @@ import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.ShoppingListItem
 import com.easypocket.mobile.domain.Store
 import com.easypocket.mobile.domain.UnitOfMeasurement
+import com.easypocket.mobile.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,7 @@ class ItemFormViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
     private val storesRepository: StoreRepository,
     private val listsRepository: ShoppingListRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemFormUiState())
@@ -77,7 +79,12 @@ class ItemFormViewModel @Inject constructor(
                 }
             } else {
                 originalItem = null
-                state = state.copy(productId = null, storeId = null, quantityText = "1")
+                val rememberedStore = settingsRepository.getLastStore()
+                val storeId = rememberedStore?.takeIf { id -> stores.any { it.id == id } }
+                if (rememberedStore != null && storeId == null) {
+                    settingsRepository.setLastStore(null)
+                }
+                state = state.copy(productId = null, storeId = storeId, quantityText = "1")
             }
             _uiState.value = state.copy(isLoading = false)
             recompute()
@@ -126,6 +133,9 @@ class ItemFormViewModel @Inject constructor(
             null
         } else {
             listsRepository.addItem(listId, state.productId, storeId, quantity)
+        }
+        if (storeId != null) {
+            settingsRepository.setLastStore(storeId)
         }
         onSaved(savedId)
     }

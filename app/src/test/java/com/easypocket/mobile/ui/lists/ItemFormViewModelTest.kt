@@ -11,6 +11,7 @@ import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.UnitOfMeasurement
+import com.easypocket.mobile.settings.SettingsRepository
 import com.easypocket.mobile.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -33,6 +34,7 @@ class ItemFormViewModelTest {
     private lateinit var listsRepository: ShoppingListRepository
     private lateinit var storesRepository: StoreRepository
     private lateinit var productsRepository: ProductRepository
+    private lateinit var settingsRepository: SettingsRepository
 
     @After
     fun tearDown() {
@@ -46,10 +48,13 @@ class ItemFormViewModelTest {
         storesRepository = StoreRepository(db.storeDao())
         productsRepository = ProductRepository(db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
+        settingsRepository = SettingsRepository(context)
+        settingsRepository.setLastStore(null)
         Seeder(db).seedIfEmpty()
     }
 
-    private fun vm() = ItemFormViewModel(SavedStateHandle(), productsRepository, storesRepository, listsRepository)
+    private fun vm() =
+        ItemFormViewModel(SavedStateHandle(), productsRepository, storesRepository, listsRepository, settingsRepository)
 
     @Test
     fun `quantity validation accepts decimals and rejects garbage`() = runTest {
@@ -216,6 +221,28 @@ class ItemFormViewModelTest {
         var saved = false
         editVm.save { saved = true }
         assertFalse(saved)
+    }
+
+    @Test
+    fun `load preselects last used store and clears memory when it no longer exists`() = runTest {
+        repos()
+        val vm = vm()
+        vm.load("0oasidu0as9dua0sd", -1)
+        vm.selectProduct("prod-001")
+        vm.setStore("store-demo")
+        vm.setQuantity("2")
+        vm.save {}
+
+        val next = vm()
+        next.load("0oasidu0as9dua0sd", -1)
+        assertEquals("store-demo", next.uiState.value.storeId)
+
+        storesRepository.deleteAll(listOf("store-demo"))
+
+        val after = vm()
+        after.load("0oasidu0as9dua0sd", -1)
+        assertNull(after.uiState.value.storeId)
+        assertNull(settingsRepository.getLastStore())
     }
 
     @Test
