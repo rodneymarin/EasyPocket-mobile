@@ -1,10 +1,13 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,13 +56,14 @@ import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.LocalToastState
-import com.easypocket.mobile.ui.components.SelectField
-import com.easypocket.mobile.ui.components.SelectOption
 import com.easypocket.mobile.ui.components.ToastType
 import com.easypocket.mobile.ui.products.ProductFormContent
 import com.easypocket.mobile.ui.products.ProductFormViewModel
 import com.easypocket.mobile.ui.products.ProductPickerSheet
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import com.easypocket.mobile.ui.theme.LocalIsDark
+import com.easypocket.mobile.ui.theme.StoreColors
+import com.easypocket.mobile.domain.Store
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -149,33 +153,37 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             }
 
             Spacer(Modifier.height(16.dp))
-            FieldLabel(t("listItem.storeLabel", language))
-            Spacer(Modifier.height(8.dp))
-            val storeOptions = listOf(SelectOption("", t("listItem.storeNone", language))) + uiState.stores.map { store ->
-                val price = selectedProduct?.prices?.firstOrNull { it.storeId == store.id }?.value
-                SelectOption(store.id, store.description, trailing = price?.let { "$" + formatAmount(it) })
-            }
-            SelectField(
-                options = storeOptions,
-                onSelect = { id -> vm.setStore(if (id.isEmpty()) null else id) },
-                selectedId = uiState.storeId ?: "",
-                placeholder = t("listItem.storePlaceholder", language),
-            )
-
-            Spacer(Modifier.height(16.dp))
             FieldLabel(t("listItem.quantityLabel", language))
             Spacer(Modifier.height(8.dp))
-            FormTextField(
-                value = uiState.quantityText,
-                onValueChange = vm::setQuantity,
-                placeholder = "0",
-                keyboardType = KeyboardType.Decimal,
-                fontSize = 15,
-                selectAllOnFocus = true,
-                trailing = uiState.unitLabelKey?.let { key ->
-                    t(key, language).let { label -> if (label != key) label else key.removePrefix("unit.") }
-                },
-                modifier = Modifier.fillMaxWidth(),
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FormTextField(
+                    value = uiState.quantityText,
+                    onValueChange = vm::setQuantity,
+                    placeholder = "0",
+                    keyboardType = KeyboardType.Decimal,
+                    fontSize = 15,
+                    selectAllOnFocus = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                UnitLabel(
+                    text = if (uiState.productId == null) {
+                        "--"
+                    } else {
+                        uiState.unitLabelKey
+                            ?.let { key -> t(key, language).let { label -> if (label != key) label else key.removePrefix("unit.") } }
+                            ?: "--"
+                    },
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            FieldLabel(t("listItem.storeLabel", language))
+            Spacer(Modifier.height(8.dp))
+            StoreTagSelector(
+                stores = uiState.stores,
+                selectedStoreId = uiState.storeId,
+                onSelect = { id -> vm.setStore(id) },
             )
 
             Spacer(Modifier.height(20.dp))
@@ -312,6 +320,49 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
 private fun FieldLabel(text: String) {
     val appColors = LocalAppColors.current
     Text(text, color = appColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun UnitLabel(text: String) {
+    val appColors = LocalAppColors.current
+    Text(text, color = appColors.textSecondary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StoreTagSelector(
+    stores: List<Store>,
+    selectedStoreId: String?,
+    onSelect: (String?) -> Unit,
+) {
+    val isDark = LocalIsDark.current
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        stores.forEach { store ->
+            val selected = store.id == selectedStoreId
+            val color = StoreColors.get(store.color, isDark)
+            val shape = RoundedCornerShape(999.dp)
+            Box(
+                modifier = Modifier
+                    .border(2.dp, if (selected) color else Color.Transparent, shape)
+                    .padding(2.dp)
+                    .clip(shape)
+                    .background(StoreColors.backgroundAlpha(store.color, isDark))
+                    .clickable { onSelect(if (selected) null else store.id) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            ) {
+                Text(
+                    text = store.description,
+                    color = StoreColors.textColor(store.color, isDark),
+                    fontSize = 13.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                )
+            }
+        }
+    }
 }
 
 @Composable

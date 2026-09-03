@@ -56,7 +56,6 @@ fun FormTextField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     fontSize: Int = 14,
-    trailing: String? = null,
     isError: Boolean = false,
     autoFocus: Boolean = false,
     selectAllOnFocus: Boolean = false,
@@ -128,13 +127,6 @@ fun FormTextField(
                     .onFocusChanged {
                         isFocused = it.isFocused
                     },
-            )
-        }
-        if (trailing != null) {
-            Text(
-                text = trailing,
-                color = appColors.textSecondary,
-                fontSize = 15.sp,
             )
         }
         if (hasValue) {
