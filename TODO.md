@@ -1,4 +1,3 @@
-- Corregir tildes para orden alfabetico
-- Agregar iconos a las categorias.
 - Mover productos a otra lista.
 - Agregar productos a lista desde maestro de productos.
+- Hacer quick-list: agregar productos a la lista escribiendo rapidamente los productos en texto plano (uno por linea)
