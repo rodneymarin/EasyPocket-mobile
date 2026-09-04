@@ -13,6 +13,7 @@ import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.Seeder
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.i18n.Language
+import com.easypocket.mobile.settings.SettingsRepository
 import com.easypocket.mobile.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -60,6 +61,7 @@ class ListDetailViewModelTest {
                 storeDao = db.storeDao(),
             ),
             CategoryRepository(db, db.categoryDao(), db.productDao()),
+            SettingsRepository(context),
         )
     }
 
@@ -295,6 +297,33 @@ class ListDetailViewModelTest {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context).toString()
         assertEquals("Papa ... 2.5 Kg", text)
+    }
+
+    @Test
+    fun `quickAdd matches product lines and adds them with last store`() = runTest {
+        val vm = createVm()
+        val list = listsRepository.create("Mi lista")
+        vm.load(list.id)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        SettingsRepository(context).setLastStore("store-demo")
+        val added = vm.quickAdd("papa\nleche líquida\nproducto inexistente xyz\n\nMantequilla")
+        assertEquals(3, added)
+        val items = vm.uiState.value.list!!.items
+        val products = items.map { vm.uiState.value.productsById[it.productId]!!.productName }
+        assertTrue(products.any { it.equals("Papa", ignoreCase = true) })
+        assertTrue(products.any { it.equals("Leche líquida", ignoreCase = true) })
+        assertTrue(products.any { it.equals("Mantequilla", ignoreCase = true) })
+        assertTrue(items.all { it.storeId == "store-demo" })
+    }
+
+    @Test
+    fun `quickAdd with no matching lines adds nothing`() = runTest {
+        val vm = createVm()
+        val list = listsRepository.create("Mi lista")
+        vm.load(list.id)
+        val added = vm.quickAdd("cosa rara\notra cosa")
+        assertEquals(0, added)
+        assertEquals(0, vm.uiState.value.list!!.items.size)
     }
 
     @Test

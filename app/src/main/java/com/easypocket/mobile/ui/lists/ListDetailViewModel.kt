@@ -9,6 +9,7 @@ import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
+import com.easypocket.mobile.settings.SettingsRepository
 import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ItemSection
@@ -106,6 +107,7 @@ class ListDetailViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
     private val historyRepository: PurchaseHistoryRepository,
     private val categoryRepository: CategoryRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ListDetailUiState())
@@ -151,6 +153,31 @@ class ListDetailViewModel @Inject constructor(
                 list = current,
             )
         }
+    }
+
+    suspend fun quickAdd(text: String): Int {
+        val listId = _uiState.value.list?.id ?: return 0
+        val state = _uiState.value
+        val lastStoreId = settingsRepository.getLastStore()?.takeIf { id -> state.stores.any { it.id == id } }
+        val products = state.productsById.values.toList()
+        val added = mutableListOf<ShoppingListItem>()
+        text.lines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .forEach { line ->
+                val product = ListLogic.findBestProductMatch(line, products) ?: return@forEach
+                val itemId = listsRepository.addItem(listId, product.id, lastStoreId, 1.0)
+                added.add(
+                    ShoppingListItem(id = itemId, productId = product.id, quantity = 1.0, storeId = lastStoreId),
+                )
+            }
+        if (added.isNotEmpty()) {
+            val current = _uiState.value.list
+            if (current != null) {
+                _uiState.value = _uiState.value.copy(list = current.copy(items = current.items + added))
+            }
+        }
+        return added.size
     }
 
     suspend fun renameList(title: String, icon: String) {

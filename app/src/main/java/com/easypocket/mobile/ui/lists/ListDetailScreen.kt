@@ -16,12 +16,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,7 +51,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -86,6 +92,7 @@ import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.AppItemList
 import com.easypocket.mobile.ui.components.ListItemRow
+import com.easypocket.mobile.ui.components.inputContainerColor
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
@@ -118,6 +125,8 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var showDeleteSelected by rememberSaveable { mutableStateOf(false) }
     var showMove by rememberSaveable { mutableStateOf(false) }
     var moveLists by remember { mutableStateOf(listOf<ShoppingList>()) }
+    var showQuickAdd by rememberSaveable { mutableStateOf(false) }
+    var quickAddInput by remember { mutableStateOf("") }
 
     LaunchedEffect(listId) { vm.load(listId) }
 
@@ -216,6 +225,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         }
                     },
                     onDelete = { showDeleteSelected = true },
+                    onQuickAdd = { showQuickAdd = true },
                 )
 
                 val list = uiState.list ?: return@Column
@@ -343,6 +353,29 @@ fun ListDetailScreen(navController: NavController, listId: String) {
         },
         onDismiss = { showMove = false },
     )
+
+    QuickAddSheet(
+        visible = showQuickAdd,
+        input = quickAddInput,
+        onInputChange = { quickAddInput = it },
+        language = language,
+        onAdd = {
+            scope.launch {
+                val added = vm.quickAdd(quickAddInput)
+                showQuickAdd = false
+                quickAddInput = ""
+                if (added > 0) {
+                    toast.show(
+                        t("toast.quickAddCompleted", language, mapOf("count" to added.toString())),
+                        ToastType.SUCCESS,
+                    )
+                } else {
+                    toast.show(t("toast.quickAddNoMatch", language), ToastType.WARNING)
+                }
+            }
+        },
+        onDismiss = { showQuickAdd = false },
+    )
 }
 
 private fun Set<Long>.toggle(id: Long): Set<Long> =
@@ -385,6 +418,7 @@ private fun ActionBar(
     onMove: () -> Unit,
     onPin: () -> Unit,
     onDelete: () -> Unit,
+    onQuickAdd: () -> Unit,
 ) {
     if (uiState.isSelectionMode) {
         SelectionActionsBar(
@@ -439,6 +473,13 @@ private fun ActionBar(
                         onClick = {
                             onDismissMenu()
                             onCopy()
+                        },
+                    )
+                    DropdownItem(
+                        label = t("listDetail.quickAdd", language),
+                        onClick = {
+                            onDismissMenu()
+                            onQuickAdd()
                         },
                     )
                     DropdownItem(
@@ -994,6 +1035,69 @@ private fun DetailTitleInput(
         onValueChange = onValueChange,
         placeholder = placeholder,
         autoFocus = autoFocus,
+    )
+}
+
+@Composable
+private fun QuickAddSheet(
+    visible: Boolean,
+    input: String,
+    onInputChange: (String) -> Unit,
+    language: Language,
+    onAdd: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppBottomSheet(
+        visible = visible,
+        onDismiss = onDismiss,
+        heightFraction = 0.6f,
+        title = t("listDetail.quickAdd", language),
+    ) {
+        QuickAddInput(
+            value = input,
+            onValueChange = onInputChange,
+            placeholder = t("listDetail.quickAddPlaceholder", language),
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.height(16.dp))
+        AppButton(
+            text = t("common.add", language),
+            onClick = onAdd,
+            enabled = input.trim().isNotEmpty(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun QuickAddInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+) {
+    val appColors = LocalAppColors.current
+    val scrollState = rememberScrollState()
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = TextStyle(color = appColors.text, fontSize = 14.sp),
+        cursorBrush = SolidColor(appColors.primary),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(inputContainerColor())
+            .verticalScroll(scrollState)
+            .heightIn(min = 26.dp * 8)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        decorationBox = { innerField ->
+            Box {
+                if (value.isEmpty()) {
+                    Text(placeholder, color = appColors.placeholderText, fontSize = 14.sp)
+                }
+                innerField()
+            }
+        },
     )
 }
 

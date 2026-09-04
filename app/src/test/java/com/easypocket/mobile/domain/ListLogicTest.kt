@@ -71,6 +71,36 @@ class ListLogicTest {
     }
 
     @Test
+    fun `findBestProductMatch returns null for blank or unmatched queries`() {
+        assertEquals(null, ListLogic.findBestProductMatch("", products.values.toList()))
+        assertEquals(null, ListLogic.findBestProductMatch("   ", products.values.toList()))
+        assertEquals(null, ListLogic.findBestProductMatch("chocolate", products.values.toList()))
+    }
+
+    @Test
+    fun `findBestProductMatch matches single word ignoring case and accents`() {
+        assertEquals(milk, ListLogic.findBestProductMatch("milk", products.values.toList()))
+        assertEquals(milk, ListLogic.findBestProductMatch("MILK", products.values.toList()))
+    }
+
+    @Test
+    fun `findBestProductMatch uses all words in the line`() {
+        val wholeMilk = Product("p3", "Leche entera", UnitOfMeasurement.UNIT)
+        val lactoseFreeMilk = Product("p4", "Leche deslactosada", UnitOfMeasurement.UNIT)
+        val list = listOf(milk, bread, wholeMilk, lactoseFreeMilk)
+        assertEquals(wholeMilk, ListLogic.findBestProductMatch("leche entera", list))
+        assertEquals(null, ListLogic.findBestProductMatch("leche chocolate", list))
+    }
+
+    @Test
+    fun `findBestProductMatch picks best score and prefers exact match`() {
+        val milkPowder = Product("p3", "Milk powder", UnitOfMeasurement.UNIT)
+        val list = listOf(milk, bread, milkPowder)
+        assertEquals(milk, ListLogic.findBestProductMatch("milk", list))
+        assertEquals(milkPowder, ListLogic.findBestProductMatch("powder milk", list))
+    }
+
+    @Test
     fun `groupedSections sorts categories alphabetically, items alphabetically and uncategorized last`() {
         val fruits = Category("c1", "Frutas")
         val veggies = Category("c2", "Verduras")

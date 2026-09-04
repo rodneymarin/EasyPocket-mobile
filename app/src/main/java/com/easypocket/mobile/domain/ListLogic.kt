@@ -86,6 +86,26 @@ object ListLogic {
             "${product?.productName ?: ""} ... ${trimQuantity(item.quantity)} $unitLabel"
         }
 
+    fun findBestProductMatch(query: String, products: List<Product>): Product? {
+        val normalizedQuery = normalize(query).trim()
+        if (normalizedQuery.isEmpty()) return null
+        val queryWords = normalizedQuery.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        var best: Product? = null
+        var bestScore = -1
+        for (product in products) {
+            val name = normalize(product.productName)
+            if (name == normalizedQuery) return product
+            val nameWords = name.split(Regex("\\s+"))
+            if (queryWords.any { !name.contains(it) }) continue
+            val score = queryWords.sumOf { word -> if (nameWords.any { it == word }) 2 else 1 }
+            if (score > bestScore || (score == bestScore && best != null && name.length < normalize(best.productName).length)) {
+                bestScore = score
+                best = product
+            }
+        }
+        return best
+    }
+
     fun trimQuantity(q: Double): String =
         if (q == q.toLong().toDouble()) q.toLong().toString() else q.toString()
 
