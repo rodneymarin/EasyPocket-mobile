@@ -461,7 +461,7 @@ private fun ActionBar(
             Box {
                 IconButtonCircle(
                     icon = Icons.Default.MoreVert,
-                    onClick = { if (uiState.hasItems) onShowMenu() },
+                    onClick = onShowMenu,
                     variant = ButtonVariant.SECONDARY,
                 )
                 DropdownMenu(
