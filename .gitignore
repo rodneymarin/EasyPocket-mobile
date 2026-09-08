@@ -18,3 +18,5 @@ app/release/
 *.keystore
 .kotlin/
 TODO.md
+
+keystore.properties
