@@ -13,13 +13,13 @@ class StoreColorsTest {
 
     @Test
     fun `get returns color by index`() {
-        assertEquals(Color(0xFFD4D4D8), StoreColors.get(0, isDark = false))
+        assertEquals(Color(0xFFA1A1AA), StoreColors.get(0, isDark = false))
         assertEquals(Color(0xFFCA8A04), StoreColors.get(8, isDark = true))
     }
 
     @Test
     fun `get clamps out of range index`() {
-        assertEquals(Color(0xFFD4D4D8), StoreColors.get(-1, isDark = false))
+        assertEquals(Color(0xFFA1A1AA), StoreColors.get(-1, isDark = false))
         assertEquals(Color(0xFF6B7280), StoreColors.get(99, isDark = true))
     }
 }

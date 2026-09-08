@@ -4,9 +4,9 @@ import androidx.compose.ui.graphics.Color
 
 object StoreColors {
     val light = listOf(
-        Color(0xFFD4D4D8), Color(0xFF99F6E4), Color(0xFF86EFAC), Color(0xFF93C5FD),
-        Color(0xFFC4B5FD), Color(0xFFF9A8D4), Color(0xFFFCA5A5), Color(0xFFFDBA74),
-        Color(0xFFFDE047),
+        Color(0xFFA1A1AA), Color(0xFF2DD4BF), Color(0xFF4ADE80), Color(0xFF60A5FA),
+        Color(0xFFA78BFA), Color(0xFFF472B6), Color(0xFFF87171), Color(0xFFFB923C),
+        Color(0xFFFACC15),
     )
     val dark = listOf(
         Color(0xFF6B7280), Color(0xFF0D9488), Color(0xFF059669), Color(0xFF2563EB),
