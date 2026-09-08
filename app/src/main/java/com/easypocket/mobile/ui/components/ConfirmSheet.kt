@@ -21,11 +21,13 @@ fun ConfirmSheet(
     message: String,
     warning: String? = null,
     confirmLabel: String,
+    heightFraction: Float = 0.35f,
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AppBottomSheet(visible = visible, onDismiss = onDismiss, heightFraction = 0.35f) {
-        ConfirmSheetContent(title, message, warning, confirmLabel, onConfirm)
+    AppBottomSheet(visible = visible, onDismiss = onDismiss, heightFraction = heightFraction) {
+        ConfirmSheetContent(title, message, warning, confirmLabel, extraContent, onConfirm)
     }
 }
 
@@ -35,6 +37,7 @@ private fun ColumnScope.ConfirmSheetContent(
     message: String,
     warning: String?,
     confirmLabel: String,
+    extraContent: (@Composable ColumnScope.() -> Unit)?,
     onConfirm: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -65,6 +68,10 @@ private fun ColumnScope.ConfirmSheetContent(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+        if (extraContent != null) {
+            Spacer(Modifier.height(12.dp))
+            extraContent()
         }
         Spacer(Modifier.height(20.dp))
         AppButton(

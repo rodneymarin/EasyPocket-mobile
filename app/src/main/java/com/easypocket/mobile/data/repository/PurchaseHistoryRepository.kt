@@ -30,7 +30,11 @@ class PurchaseHistoryRepository @Inject constructor(
 
     suspend fun delete(id: String) = historyDao.deleteById(id)
 
-    suspend fun archiveCompleted(listId: String, date: Long = System.currentTimeMillis()) {
+    suspend fun archiveCompleted(
+        listId: String,
+        date: Long = System.currentTimeMillis(),
+        manualTotal: Double? = null,
+    ) {
         db.withTransaction {
             val relation = listDao.getById(listId) ?: return@withTransaction
             val doneItems = relation.items.filter { it.done }
@@ -58,12 +62,14 @@ class PurchaseHistoryRepository @Inject constructor(
                     itemUid = UUID.randomUUID().toString(),
                 )
             }
+            val itemsTotal = historyItems.sumOf { it.totalPrice }
+            val totalAmount = if (itemsTotal == 0.0 && manualTotal != null && manualTotal > 0.0) manualTotal else itemsTotal
             val history = PurchaseHistoryEntity(
                 id = historyId,
                 listTitle = relation.list.title,
                 listIcon = relation.list.icon,
                 date = date,
-                totalAmount = historyItems.sumOf { it.totalPrice },
+                totalAmount = totalAmount,
                 itemCount = historyItems.size,
             )
             historyDao.insertHistory(history)

@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -133,6 +134,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var renameIcon by remember { mutableStateOf("") }
     var showRemoveCompleted by rememberSaveable { mutableStateOf(false) }
     var showArchive by rememberSaveable { mutableStateOf(false) }
+    var manualTotalText by rememberSaveable { mutableStateOf("") }
     var showDeleteSelected by rememberSaveable { mutableStateOf(false) }
     var showMove by rememberSaveable { mutableStateOf(false) }
     var moveLists by remember { mutableStateOf(listOf<ShoppingList>()) }
@@ -326,14 +328,41 @@ fun ListDetailScreen(navController: NavController, listId: String) {
         title = t("listDetail.archiveToHistory", language),
         message = t("listDetail.archiveConfirmMessage", language),
         confirmLabel = t("listDetail.archiveConfirm", language),
+        heightFraction = if (uiState.doneItemsTotal == 0.0) 0.45f else 0.35f,
+        extraContent = if (uiState.doneItemsTotal == 0.0) {
+            {
+                Column {
+                    Text(
+                        text = t("listDetail.archiveManualTotalLabel", language),
+                        color = appColors.textSecondary,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FormTextField(
+                        value = manualTotalText,
+                        onValueChange = { manualTotalText = it },
+                        placeholder = t("listDetail.archiveManualTotalPlaceholder", language),
+                        keyboardType = KeyboardType.Decimal,
+                    )
+                }
+            }
+        } else {
+            null
+        },
         onConfirm = {
             scope.launch {
-                vm.archiveCompleted()
+                vm.archiveCompleted(manualTotal = manualTotalText.toDoubleOrNull()?.takeIf { it > 0.0 })
                 showArchive = false
+                manualTotalText = ""
                 toast.show(t("toast.listArchived", language), ToastType.SUCCESS)
             }
         },
-        onDismiss = { showArchive = false },
+        onDismiss = {
+            showArchive = false
+            manualTotalText = ""
+        },
     )
 
     ConfirmSheet(

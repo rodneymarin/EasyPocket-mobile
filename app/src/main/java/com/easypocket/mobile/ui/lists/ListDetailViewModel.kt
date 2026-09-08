@@ -80,6 +80,17 @@ data class ListDetailUiState(
 
     val hasItems: Boolean get() = list?.items?.isNotEmpty() == true
 
+    val doneItemsTotal: Double
+        get() {
+            val current = list ?: return 0.0
+            return current.items.filter { it.done }.sumOf { item ->
+                val price = item.storeId
+                    ?.let { sid -> productsById[item.productId]?.prices?.firstOrNull { it.storeId == sid }?.value }
+                    ?: 0.0
+                price * item.quantity
+            }
+        }
+
     val hasDoneItems: Boolean get() = doneItems.isNotEmpty()
 
     val filterStores: List<Store>
@@ -201,11 +212,11 @@ class ListDetailViewModel @Inject constructor(
         resetFilterIfEmpty()
     }
 
-    suspend fun archiveCompleted() {
+    suspend fun archiveCompleted(manualTotal: Double? = null) {
         val current = _uiState.value.list ?: return
         val doneIds = current.items.filter { it.done }.map { it.id }
         if (doneIds.isEmpty()) return
-        historyRepository.archiveCompleted(current.id)
+        historyRepository.archiveCompleted(current.id, manualTotal = manualTotal)
         _uiState.value = _uiState.value.copy(list = current.copy(items = current.items.filter { !it.done }))
         resetFilterIfEmpty()
     }
