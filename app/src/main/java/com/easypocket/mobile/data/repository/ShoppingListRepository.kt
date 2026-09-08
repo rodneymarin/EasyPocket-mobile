@@ -21,7 +21,17 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
             relation.list.id,
             relation.list.title,
             relation.list.icon,
-            relation.items.map { ShoppingListItem(it.id, it.productId, it.quantity, it.storeId, it.done, it.pinned) },
+            relation.items.map {
+                ShoppingListItem(
+                    it.id,
+                    it.productId,
+                    it.quantity,
+                    it.storeId,
+                    it.categoryId,
+                    it.done,
+                    it.pinned,
+                )
+            },
         )
 
     suspend fun getAll(): List<ShoppingList> = listDao.getAll().first().map(::withItems).sortedWith(Alphabet.comparator { it.title })
@@ -39,15 +49,35 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
     suspend fun rename(id: String, title: String, icon: String) =
         listDao.updateTitleAndIcon(id, title, icon)
 
-    suspend fun addItem(listId: String, productId: String, storeId: String?, quantity: Double): Long =
+    suspend fun addItem(
+        listId: String,
+        productId: String,
+        storeId: String?,
+        quantity: Double,
+        categoryId: String? = null,
+    ): Long =
         listDao.insertItem(
-            ShoppingListItemEntity(shoppingListId = listId, productId = productId, storeId = storeId, quantity = quantity)
+            ShoppingListItemEntity(
+                shoppingListId = listId,
+                productId = productId,
+                storeId = storeId,
+                categoryId = categoryId,
+                quantity = quantity,
+            )
         )
 
     suspend fun toggleItemDone(itemId: Long, done: Boolean) = listDao.toggleItemDone(itemId, done)
 
     suspend fun updateItem(item: ShoppingListItem) =
-        listDao.updateItemFields(item.id, item.productId, item.storeId, item.quantity, item.done, item.pinned)
+        listDao.updateItemFields(
+            item.id,
+            item.productId,
+            item.storeId,
+            item.categoryId,
+            item.quantity,
+            item.done,
+            item.pinned,
+        )
 
     suspend fun removeItems(ids: List<Long>) = listDao.removeItems(ids)
 

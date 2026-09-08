@@ -104,22 +104,37 @@ class ListLogicTest {
     fun `groupedSections sorts categories alphabetically, items alphabetically and uncategorized last`() {
         val fruits = Category("c1", "Frutas")
         val veggies = Category("c2", "Verduras")
-        val apple = Product("p1", "Apple", UnitOfMeasurement.UNIT, categoryId = "c1")
-        val banana = Product("p2", "Banana", UnitOfMeasurement.UNIT, categoryId = "c1")
-        val carrot = Product("p3", "Carrot", UnitOfMeasurement.UNIT, categoryId = "c2")
+        val apple = Product("p1", "Apple", UnitOfMeasurement.UNIT)
+        val banana = Product("p2", "Banana", UnitOfMeasurement.UNIT)
+        val carrot = Product("p3", "Carrot", UnitOfMeasurement.UNIT)
         val water = Product("p4", "Water", UnitOfMeasurement.LT)
         val products = mapOf("p1" to apple, "p2" to banana, "p3" to carrot, "p4" to water)
         val categories = mapOf("c1" to fruits, "c2" to veggies)
         val items = listOf(
             ShoppingListItem(1, "p4", 1.0, null),
-            ShoppingListItem(2, "p3", 1.0, null),
-            ShoppingListItem(3, "p2", 1.0, null),
-            ShoppingListItem(4, "p1", 1.0, null, pinned = true),
+            ShoppingListItem(2, "p3", 1.0, null, categoryId = "c2"),
+            ShoppingListItem(3, "p2", 1.0, null, categoryId = "c1"),
+            ShoppingListItem(4, "p1", 1.0, null, categoryId = "c1", pinned = true),
         )
         val sections = ListLogic.groupedSections(items, products, categories)
         assertEquals(listOf("c1", "c2", null), sections.map { it.category?.id })
         assertEquals(listOf(4L, 3L), sections[0].items.map { it.id }) // pinned primero, luego alfabético
         assertEquals(listOf(2L), sections[1].items.map { it.id })
         assertEquals(listOf(1L), sections[2].items.map { it.id })
+    }
+
+    @Test
+    fun `matchesFilter uses the item category, not the product's`() {
+        // Dos ítems del mismo producto: uno categorizado y otro sin categoría.
+        val list = ShoppingList(
+            "l1",
+            "Lista",
+            items = listOf(
+                ShoppingListItem(1, "p1", 1.0, "s1", categoryId = "c1"),
+                ShoppingListItem(2, "p1", 1.0, "s2"),
+            ),
+        )
+        assertEquals(10.0, ListLogic.totalAmount(list, products, null, "c1"), 0.001)
+        assertEquals(18.5, ListLogic.totalAmount(list, products, null), 0.001)
     }
 }

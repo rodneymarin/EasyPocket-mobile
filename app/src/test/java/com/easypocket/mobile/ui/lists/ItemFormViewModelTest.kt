@@ -5,6 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.repository.CategoryRepository
+import com.easypocket.mobile.data.repository.ProductLastCategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
@@ -46,7 +48,7 @@ class ItemFormViewModelTest {
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
-        productsRepository = ProductRepository(db.productDao(), db.priceDao())
+        productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
         settingsRepository = SettingsRepository(context)
         settingsRepository.setLastStore(null)
@@ -54,7 +56,15 @@ class ItemFormViewModelTest {
     }
 
     private fun vm() =
-        ItemFormViewModel(SavedStateHandle(), productsRepository, storesRepository, listsRepository, settingsRepository)
+        ItemFormViewModel(
+            SavedStateHandle(),
+            productsRepository,
+            storesRepository,
+            listsRepository,
+            CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao()),
+            ProductLastCategoryRepository(db.productLastCategoryDao()),
+            settingsRepository,
+        )
 
     @Test
     fun `quantity validation accepts decimals and rejects garbage`() = runTest {
@@ -278,5 +288,90 @@ class ItemFormViewModelTest {
         vm.updateProduct(updated)
         assertTrue(vm.uiState.value.products.any { it.id == "prod-001" && it.productName == "Papita" })
         assertEquals("Papita", productsRepository.getByName("Papita")!!.productName)
+    }
+
+    @Test
+    fun `selectProduct preselects the remembered last category and none otherwise`() = runTest {
+        repos()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat = categoryRepository.create("Verduras")
+        val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
+        lastCategories.set("prod-001", cat.id)
+
+        val vm = vm()
+        vm.load("0oasidu0as9dua0sd", -1)
+        vm.selectProduct("prod-001")
+        assertEquals(cat.id, vm.uiState.value.categoryId)
+
+        vm.selectProduct("prod-002")
+        assertNull(vm.uiState.value.categoryId)
+    }
+
+    @Test
+    fun `save persists the item category and remembers it for the product`() = runTest {
+        repos()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat = categoryRepository.create("Verduras")
+        val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
+
+        val vm = vm()
+        vm.load("0oasidu0as9dua0sd", -1)
+        vm.selectProduct("prod-001")
+        vm.setCategory(cat.id)
+        vm.setStore("store-demo")
+        vm.setQuantity("2")
+        var savedId: Long? = null
+        vm.save { savedId = it }
+
+        val item = listsRepository.getById("0oasidu0as9dua0sd")!!.items.first { it.id == savedId }
+        assertEquals(cat.id, item.categoryId)
+        assertEquals(cat.id, lastCategories.getFor("prod-001"))
+    }
+
+    @Test
+    fun `saving without category leaves the item uncategorized and clears the memory`() = runTest {
+        repos()
+        val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
+        lastCategories.set("prod-001", "ABC123")
+
+        val vm = vm()
+        vm.load("0oasidu0as9dua0sd", -1)
+        vm.selectProduct("prod-001")
+        assertEquals("ABC123", vm.uiState.value.categoryId)
+        vm.setCategory(null)
+        vm.setQuantity("1")
+        vm.save {}
+
+        assertNull(lastCategories.getFor("prod-001"))
+        val item = listsRepository.getById("0oasidu0as9dua0sd")!!.items.last()
+        assertNull(item.categoryId)
+    }
+
+    @Test
+    fun `editing an item keeps its category and changing it updates the memory`() = runTest {
+        repos()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat1 = categoryRepository.create("Verduras")
+        val cat2 = categoryRepository.create("Lacteos")
+        val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
+
+        val vm = vm()
+        vm.load("0oasidu0as9dua0sd", -1)
+        vm.selectProduct("prod-001")
+        vm.setCategory(cat1.id)
+        vm.setQuantity("1")
+        vm.save {}
+
+        val item = listsRepository.getById("0oasidu0as9dua0sd")!!.items.last()
+
+        val editVm = vm()
+        editVm.load("0oasidu0as9dua0sd", item.id)
+        assertEquals(cat1.id, editVm.uiState.value.categoryId)
+
+        editVm.setCategory(cat2.id)
+        editVm.save {}
+        val reloaded = listsRepository.getById("0oasidu0as9dua0sd")!!.items.last { it.id == item.id }
+        assertEquals(cat2.id, reloaded.categoryId)
+        assertEquals(cat2.id, lastCategories.getFor("prod-001"))
     }
 }

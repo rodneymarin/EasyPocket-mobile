@@ -8,13 +8,13 @@ data class Product(
     val productName: String,
     val unitOfMeasurement: UnitOfMeasurement,
     val prices: List<Price> = emptyList(),
-    val categoryId: String? = null,
 )
 data class ShoppingListItem(
     val id: Long,
     val productId: String,
     val quantity: Double,
     val storeId: String?,
+    val categoryId: String? = null,
     val done: Boolean = false,
     val pinned: Boolean = false,
 )

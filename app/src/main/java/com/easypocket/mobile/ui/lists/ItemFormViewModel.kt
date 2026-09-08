@@ -2,10 +2,13 @@ package com.easypocket.mobile.ui.lists
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.CategoryRepository
+import com.easypocket.mobile.data.repository.ProductLastCategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.Alphabet
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
@@ -26,9 +29,11 @@ data class ItemFormUiState(
     val isEdit: Boolean = false,
     val productId: String? = null,
     val storeId: String? = null,
+    val categoryId: String? = null,
     val quantityText: String = "1",
     val products: List<Product> = emptyList(),
     val stores: List<Store> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val unitLabelKey: String? = null,
     val unitPrice: Double? = null,
     val totalPrice: Double? = null,
@@ -50,6 +55,8 @@ class ItemFormViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
     private val storesRepository: StoreRepository,
     private val listsRepository: ShoppingListRepository,
+    private val categoryRepository: CategoryRepository,
+    private val lastCategoryRepository: ProductLastCategoryRepository,
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
@@ -58,6 +65,7 @@ class ItemFormViewModel @Inject constructor(
 
     private var listId: String? = null
     private var originalItem: ShoppingListItem? = null
+    private var rememberedCategories: Map<String, String> = emptyMap()
 
     suspend fun load(listId: String, itemId: Long) {
         this.listId = listId
@@ -66,7 +74,9 @@ class ItemFormViewModel @Inject constructor(
         try {
             val products = productsRepository.getAll()
             val stores = storesRepository.getAll()
-            var state = _uiState.value.copy(products = products, stores = stores)
+            val categories = categoryRepository.getAll()
+            rememberedCategories = lastCategoryRepository.getAll().associate { it.productId to it.categoryId }
+            var state = _uiState.value.copy(products = products, stores = stores, categories = categories)
             if (isEdit) {
                 val item = listsRepository.getById(listId)?.items?.firstOrNull { it.id == itemId }
                 if (item != null) {
@@ -74,6 +84,7 @@ class ItemFormViewModel @Inject constructor(
                     state = state.copy(
                         productId = item.productId,
                         storeId = item.storeId,
+                        categoryId = item.categoryId,
                         quantityText = ListLogic.trimQuantity(item.quantity),
                     )
                 }
@@ -84,7 +95,7 @@ class ItemFormViewModel @Inject constructor(
                 if (rememberedStore != null && storeId == null) {
                     settingsRepository.setLastStore(null)
                 }
-                state = state.copy(productId = null, storeId = storeId, quantityText = "1")
+                state = state.copy(productId = null, storeId = storeId, categoryId = null, quantityText = "1")
             }
             _uiState.value = state.copy(isLoading = false)
             recompute()
@@ -94,13 +105,23 @@ class ItemFormViewModel @Inject constructor(
     }
 
     fun selectProduct(productId: String?) {
-        _uiState.update { it.copy(productId = productId) }
+        _uiState.update { state ->
+            state.copy(
+                productId = productId,
+                // Pre-select the last category the user used for this product, if any.
+                categoryId = productId?.let { id -> rememberedCategories[id] },
+            )
+        }
         recompute()
     }
 
     fun setStore(storeId: String?) {
         _uiState.update { it.copy(storeId = storeId) }
         recompute()
+    }
+
+    fun setCategory(categoryId: String?) {
+        _uiState.update { it.copy(categoryId = categoryId) }
     }
 
     fun setQuantity(text: String) {
@@ -112,7 +133,7 @@ class ItemFormViewModel @Inject constructor(
 
     fun clearForm() {
         originalItem = null
-        _uiState.update { it.copy(isEdit = false, productId = null, storeId = null, quantityText = "1") }
+        _uiState.update { it.copy(isEdit = false, productId = null, storeId = null, categoryId = null, quantityText = "1") }
         recompute()
     }
 
@@ -126,14 +147,23 @@ class ItemFormViewModel @Inject constructor(
         }
         val quantity = state.quantityText.toDouble()
         val storeId = state.storeId
+        val categoryId = state.categoryId
         val savedId = if (state.isEdit && originalItem != null) {
             listsRepository.updateItem(
-                originalItem!!.copy(productId = state.productId, storeId = storeId, quantity = quantity)
+                originalItem!!.copy(
+                    productId = state.productId,
+                    storeId = storeId,
+                    categoryId = categoryId,
+                    quantity = quantity,
+                )
             )
             null
         } else {
-            listsRepository.addItem(listId, state.productId, storeId, quantity)
+            listsRepository.addItem(listId, state.productId, storeId, quantity, categoryId)
         }
+        // Remember the category used for this product so it is pre-selected
+        // the next time the product is added to a list.
+        lastCategoryRepository.set(state.productId, categoryId)
         if (storeId != null) {
             settingsRepository.setLastStore(storeId)
         }

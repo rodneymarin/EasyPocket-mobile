@@ -1,5 +1,6 @@
 package com.easypocket.mobile.data.repository
 
+import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductDao
@@ -8,6 +9,7 @@ import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.UnitOfMeasurement
+import androidx.room.withTransaction
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.first
 
 @Singleton
 class ProductRepository @Inject constructor(
+    private val db: EasyPocketDatabase,
     private val productDao: ProductDao,
     private val priceDao: PriceDao,
 ) {
@@ -27,7 +30,6 @@ class ProductRepository @Inject constructor(
                 p.productName,
                 UnitOfMeasurement.fromRaw(p.unitOfMeasurement) ?: UnitOfMeasurement.UNIT,
                 prices[p.id].orEmpty().map { Price(it.storeId, it.value) },
-                p.categoryId,
             )
         }.sortedWith(Alphabet.comparator { it.productName })
     }
@@ -40,7 +42,6 @@ class ProductRepository @Inject constructor(
             entity.productName,
             UnitOfMeasurement.fromRaw(entity.unitOfMeasurement) ?: UnitOfMeasurement.UNIT,
             prices.map { Price(it.storeId, it.value) },
-            entity.categoryId,
         )
     }
 
@@ -53,19 +54,23 @@ class ProductRepository @Inject constructor(
         name: String,
         unit: UnitOfMeasurement,
         prices: List<Price> = emptyList(),
-        categoryId: String? = null,
     ): Product {
         val id = UUID.randomUUID().toString()
-        productDao.insert(ProductEntity(id, name, unit.raw, categoryId))
+        productDao.insert(ProductEntity(id, name, unit.raw))
         priceDao.insertAll(prices.map { PriceEntity(id, it.storeId, it.value) })
-        return Product(id, name, unit, prices, categoryId)
+        return Product(id, name, unit, prices)
     }
 
     suspend fun update(product: Product) {
-        productDao.update(ProductEntity(product.id, product.productName, product.unitOfMeasurement.raw, product.categoryId))
+        productDao.update(ProductEntity(product.id, product.productName, product.unitOfMeasurement.raw))
         priceDao.deleteForProduct(product.id)
         priceDao.insertAll(product.prices.map { PriceEntity(product.id, it.storeId, it.value) })
     }
 
-    suspend fun deleteAll(ids: List<String>) = productDao.deleteByIds(ids)
+    suspend fun deleteAll(ids: List<String>) {
+        db.withTransaction {
+            db.productLastCategoryDao().deleteForProducts(ids)
+            productDao.deleteByIds(ids)
+        }
+    }
 }

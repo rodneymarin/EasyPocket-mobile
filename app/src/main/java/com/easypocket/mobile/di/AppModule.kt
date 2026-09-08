@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.easypocket.mobile.data.local.CategoryDao
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceDao
+import com.easypocket.mobile.data.local.ProductLastCategoryDao
 import com.easypocket.mobile.data.local.ProductDao
 import com.easypocket.mobile.data.local.PurchaseHistoryDao
 import com.easypocket.mobile.data.local.ShoppingListDao
@@ -31,6 +32,7 @@ object AppModule {
                 EasyPocketDatabase.MIGRATION_3_4,
                 EasyPocketDatabase.MIGRATION_4_5,
                 EasyPocketDatabase.MIGRATION_5_6,
+                EasyPocketDatabase.MIGRATION_6_7,
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -43,6 +45,9 @@ object AppModule {
 
     @Provides
     fun provideProductDao(db: EasyPocketDatabase): ProductDao = db.productDao()
+
+    @Provides
+    fun provideProductLastCategoryDao(db: EasyPocketDatabase): ProductLastCategoryDao = db.productLastCategoryDao()
 
     @Provides
     fun providePriceDao(db: EasyPocketDatabase): PriceDao = db.priceDao()

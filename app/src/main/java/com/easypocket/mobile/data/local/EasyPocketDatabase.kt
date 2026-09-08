@@ -7,17 +7,18 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
-        StoreEntity::class, CategoryEntity::class, ProductEntity::class, PriceEntity::class,
-        ShoppingListEntity::class, ShoppingListItemEntity::class,
+        StoreEntity::class, CategoryEntity::class, ProductEntity::class, ProductLastCategoryEntity::class,
+        PriceEntity::class, ShoppingListEntity::class, ShoppingListItemEntity::class,
         PurchaseHistoryEntity::class, PurchaseHistoryItemEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class EasyPocketDatabase : RoomDatabase() {
     abstract fun storeDao(): StoreDao
     abstract fun categoryDao(): CategoryDao
     abstract fun productDao(): ProductDao
+    abstract fun productLastCategoryDao(): ProductLastCategoryDao
     abstract fun priceDao(): PriceDao
     abstract fun listDao(): ShoppingListDao
     abstract fun purchaseHistoryDao(): PurchaseHistoryDao
@@ -109,6 +110,135 @@ abstract class EasyPocketDatabase : RoomDatabase() {
             db.execSQL(
                 "CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_history_items_item_uid` " +
                     "ON `purchase_history_items` (`item_uid`)"
+            )
+        }
+    }
+
+    // - Creates `product_last_categories` and seeds it from the existing
+    //   `products.category_id` values, so every product keeps its last used
+    //   category as pre-selection for future list items.
+    // - Removes `products.category_id` (categories now live on list items),
+    //   which requires recreating `products` and, because of enforced foreign
+    //   keys, its child tables `product_prices` and `shopping_list_items`.
+    //   Data is staged in temporary tables WITHOUT foreign keys, `products` is
+    //   dropped and rebuilt, and then the final child tables (with foreign
+    //   keys) are rebuilt from the staged data.
+    // - Adds `shopping_list_items.category_id` (nullable, null for existing rows).
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `product_last_categories` (" +
+                    "`product_id` TEXT NOT NULL, " +
+                    "`category_id` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`product_id`))"
+            )
+            db.execSQL(
+                "INSERT INTO `product_last_categories` (`product_id`, `category_id`) " +
+                    "SELECT `id`, `category_id` FROM `products` WHERE `category_id` IS NOT NULL"
+            )
+
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `products_tmp` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`product_name` TEXT NOT NULL, " +
+                    "`unit_of_measurement` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`id`))"
+            )
+            db.execSQL(
+                "INSERT INTO `products_tmp` (`id`, `product_name`, `unit_of_measurement`) " +
+                    "SELECT `id`, `product_name`, `unit_of_measurement` FROM `products`"
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `product_prices_tmp` (" +
+                    "`product_id` TEXT NOT NULL, " +
+                    "`store_id` TEXT NOT NULL, " +
+                    "`value` REAL NOT NULL, " +
+                    "PRIMARY KEY(`product_id`, `store_id`))"
+            )
+            db.execSQL(
+                "INSERT INTO `product_prices_tmp` (`product_id`, `store_id`, `value`) " +
+                    "SELECT `product_id`, `store_id`, `value` FROM `product_prices`"
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `shopping_list_items_tmp` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`shopping_list_id` TEXT NOT NULL, " +
+                    "`product_id` TEXT NOT NULL, " +
+                    "`store_id` TEXT, " +
+                    "`category_id` TEXT, " +
+                    "`quantity` REAL NOT NULL, " +
+                    "`done` INTEGER NOT NULL, " +
+                    "`pinned` INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "INSERT INTO `shopping_list_items_tmp` " +
+                    "(`id`, `shopping_list_id`, `product_id`, `store_id`, `category_id`, `quantity`, `done`, `pinned`) " +
+                    "SELECT `id`, `shopping_list_id`, `product_id`, `store_id`, NULL, `quantity`, `done`, `pinned` FROM `shopping_list_items`"
+            )
+
+            // Safe now: nothing left referencing `products` has foreign keys.
+            db.execSQL("DROP TABLE `shopping_list_items`")
+            db.execSQL("DROP TABLE `product_prices`")
+            db.execSQL("DROP TABLE `products`")
+
+            db.execSQL("ALTER TABLE `products_tmp` RENAME TO `products`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_products_product_name` ON `products` (`product_name`)")
+
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `product_prices` (" +
+                    "`product_id` TEXT NOT NULL, " +
+                    "`store_id` TEXT NOT NULL, " +
+                    "`value` REAL NOT NULL, " +
+                    "PRIMARY KEY(`product_id`, `store_id`), " +
+                    "FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                    "FOREIGN KEY(`store_id`) REFERENCES `stores`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE)"
+            )
+            db.execSQL(
+                "INSERT INTO `product_prices` (`product_id`, `store_id`, `value`) " +
+                    "SELECT `product_id`, `store_id`, `value` FROM `product_prices_tmp`"
+            )
+            db.execSQL("DROP TABLE `product_prices_tmp`")
+
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `shopping_list_items` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`shopping_list_id` TEXT NOT NULL, " +
+                    "`product_id` TEXT NOT NULL, " +
+                    "`store_id` TEXT, " +
+                    "`category_id` TEXT, " +
+                    "`quantity` REAL NOT NULL, " +
+                    "`done` INTEGER NOT NULL, " +
+                    "`pinned` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`shopping_list_id`) REFERENCES `shopping_lists`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                    "FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                    "FOREIGN KEY(`store_id`) REFERENCES `stores`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE SET NULL)"
+            )
+            db.execSQL(
+                "INSERT INTO `shopping_list_items` " +
+                    "(`id`, `shopping_list_id`, `product_id`, `store_id`, `category_id`, `quantity`, `done`, `pinned`) " +
+                    "SELECT `id`, `shopping_list_id`, `product_id`, `store_id`, `category_id`, `quantity`, `done`, `pinned` FROM `shopping_list_items_tmp`"
+            )
+            db.execSQL("DROP TABLE `shopping_list_items_tmp`")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_shopping_list_id` " +
+                    "ON `shopping_list_items` (`shopping_list_id`)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_product_id` " +
+                    "ON `shopping_list_items` (`product_id`)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_store_id` " +
+                    "ON `shopping_list_items` (`store_id`)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_category_id` " +
+                    "ON `shopping_list_items` (`category_id`)"
             )
         }
     }

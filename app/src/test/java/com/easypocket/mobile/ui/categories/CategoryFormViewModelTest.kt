@@ -5,6 +5,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
+import com.easypocket.mobile.data.local.ShoppingListEntity
+import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.util.MainDispatcherRule
 import kotlinx.coroutines.flow.first
@@ -36,7 +39,7 @@ class CategoryFormViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        categoriesRepository = CategoryRepository(db, db.categoryDao(), db.productDao())
+        categoriesRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
     }
 
     private fun vm() = CategoryFormViewModel(categoriesRepository)
@@ -158,16 +161,24 @@ class CategoryFormViewModelTest {
     }
 
     @Test
-    fun `delete removes category and clears products`() = runTest {
+    fun `delete removes category, clears item categories and last-category memory`() = runTest {
         repos()
         val created = categoriesRepository.create("Abarrotes")
-        db.productDao().insert(ProductEntity("p1", "Arroz", "u", categoryId = created.id))
+        db.productDao().insert(ProductEntity("p1", "Arroz", "u"))
+        db.listDao().insert(ShoppingListEntity("l1", "Lista"))
+        val itemId = db.listDao().insertItem(
+            ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = created.id, quantity = 1.0)
+        )
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", created.id))
         val v = vm()
         v.load(created.id)
         var deleted = false
         v.delete { deleted = true }
         assertTrue(deleted)
         assertTrue(categoriesRepository.getAll().isEmpty())
-        assertNull(db.productDao().getAll().first().first().categoryId)
+        val items = db.listDao().getById("l1")!!.items
+        assertEquals(1, items.size)
+        assertNull(items.first { it.id == itemId }.categoryId)
+        assertNull(db.productLastCategoryDao().getByProductId("p1"))
     }
 }

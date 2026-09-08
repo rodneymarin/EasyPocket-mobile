@@ -7,6 +7,7 @@ import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
@@ -24,7 +25,8 @@ import kotlinx.serialization.json.Json
 class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
 
     companion object {
-        private const val SUPPORTED_VERSION = 1
+        private const val SUPPORTED_VERSION = 2
+        private const val LEGACY_VERSION = 1
         private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
     }
 
@@ -32,6 +34,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
         val stores = db.storeDao().getAll().first()
         val categories = db.categoryDao().getAll().first()
         val products = db.productDao().getAll().first()
+        val lastCategories = db.productLastCategoryDao().getAll().first()
         val prices = db.priceDao().getAll().first()
         val lists = db.listDao().getAll().first()
         val history = db.purchaseHistoryDao().observeAll().first()
@@ -40,11 +43,15 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             exportedAt = Instant.now().toString(),
             stores = stores.map { BackupStore(it.id, it.description, it.color) },
             categories = categories.map { BackupCategory(it.id, it.name, it.icon) },
-            products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement, it.categoryId) },
+            products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement) },
+            lastCategories = lastCategories.map { BackupProductLastCategory(it.productId, it.categoryId) },
             prices = prices.map { BackupPrice(it.productId, it.storeId, it.value) },
             shoppingLists = lists.map { BackupList(it.list.id, it.list.title, it.list.icon) },
             listItems = lists.flatMap { it.items.map { i ->
-                BackupListItem(i.id, i.shoppingListId, i.productId, i.storeId, i.quantity, i.done, i.pinned)
+                BackupListItem(
+                    i.id, i.shoppingListId, i.productId, i.storeId,
+                    i.categoryId, i.quantity, i.done, i.pinned,
+                )
             } },
             purchaseHistory = history.map { BackupPurchaseHistory(
                 it.record.id, it.record.listTitle, it.record.listIcon,
@@ -91,7 +98,17 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             db.clearAllTables()
             backup.stores.forEach { db.storeDao().insert(StoreEntity(it.id, it.description, it.color)) }
             backup.categories.forEach { db.categoryDao().insert(CategoryEntity(it.id, it.name, it.icon.ifBlank { "$" })) }
-            backup.products.forEach { db.productDao().insert(ProductEntity(it.id, it.productName, it.unitOfMeasurement, it.categoryId)) }
+            backup.products.forEach { db.productDao().insert(ProductEntity(it.id, it.productName, it.unitOfMeasurement)) }
+            // Version 1 backups stored the category on the product; preserve it
+            // as the product's remembered last category.
+            backup.products.forEach { product ->
+                product.categoryId?.let { categoryId ->
+                    db.productLastCategoryDao().upsert(ProductLastCategoryEntity(product.id, categoryId))
+                }
+            }
+            backup.lastCategories.forEach {
+                db.productLastCategoryDao().upsert(ProductLastCategoryEntity(it.productId, it.categoryId))
+            }
             if (backup.prices.isNotEmpty()) {
                 db.priceDao().insertAll(backup.prices.map { PriceEntity(it.productId, it.storeId, it.value) })
             }
@@ -103,6 +120,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                         shoppingListId = item.shoppingListId,
                         productId = item.productId,
                         storeId = item.storeId,
+                        categoryId = item.categoryId,
                         quantity = item.quantity,
                         done = item.done,
                         pinned = item.pinned,
@@ -132,8 +150,11 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
     }
 
     private fun validate(backup: BackupData) {
-        require(backup.version == SUPPORTED_VERSION) { "Unsupported backup version: ${backup.version}" }
+        require(backup.version in LEGACY_VERSION..SUPPORTED_VERSION) {
+            "Unsupported backup version: ${backup.version}"
+        }
         val storeIds = backup.stores.map { it.id }
+        val categoryIds = backup.categories.map { it.id }
         val productIds = backup.products.map { it.id }
         val listIds = backup.shoppingLists.map { it.id }
         require(storeIds.size == storeIds.toSet().size) { "Duplicate store ids in backup" }
@@ -143,10 +164,17 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             require(UnitOfMeasurement.fromRaw(it.unitOfMeasurement) != null) {
                 "Unknown unit of measurement: ${it.unitOfMeasurement}"
             }
+            require(it.categoryId == null || it.categoryId in categoryIds) {
+                "Product references unknown category: ${it.categoryId}"
+            }
         }
         backup.prices.forEach {
             require(it.productId in productIds) { "Price references unknown product: ${it.productId}" }
             require(it.storeId in storeIds) { "Price references unknown store: ${it.storeId}" }
+        }
+        backup.lastCategories.forEach {
+            require(it.productId in productIds) { "Last category references unknown product: ${it.productId}" }
+            require(it.categoryId in categoryIds) { "Last category references unknown category: ${it.categoryId}" }
         }
         val itemIds = backup.listItems.map { it.id }
         require(itemIds.size == itemIds.toSet().size) { "Duplicate list item ids in backup" }
@@ -154,6 +182,9 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             require(item.shoppingListId in listIds) { "List item references unknown list: ${item.shoppingListId}" }
             require(item.productId in productIds) { "List item references unknown product: ${item.productId}" }
             require(item.storeId == null || item.storeId in storeIds) { "List item references unknown store: ${item.storeId}" }
+            require(item.categoryId == null || item.categoryId in categoryIds) {
+                "List item references unknown category: ${item.categoryId}"
+            }
         }
         val historyIds = backup.purchaseHistory.map { it.id }
         require(historyIds.size == historyIds.toSet().size) { "Duplicate history ids in backup" }

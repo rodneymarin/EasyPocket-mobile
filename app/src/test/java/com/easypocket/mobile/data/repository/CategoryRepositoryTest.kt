@@ -5,8 +5,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
+import com.easypocket.mobile.data.local.ShoppingListEntity
+import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -30,7 +33,7 @@ class CategoryRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repo = CategoryRepository(db, db.categoryDao(), db.productDao())
+        repo = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
     }
 
     @After
@@ -111,22 +114,26 @@ class CategoryRepositoryTest {
     }
 
     @Test
-    fun `deleteAll clears categoryId from products and deletes categories`() = runTest {
+    fun `deleteAll clears item categories, forgets last categories and deletes categories`() = runTest {
         val cat = repo.create("Abarrotes")
-        db.productDao().insert(ProductEntity("p1", "Arroz", "u", categoryId = cat.id))
-        db.productDao().insert(ProductEntity("p2", "Leche", "lt", categoryId = null))
+        db.productDao().insert(ProductEntity("p1", "Arroz", "u"))
+        db.listDao().insert(ShoppingListEntity("l1", "Lista"))
+        val itemId = db.listDao().insertItem(
+            ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = cat.id, quantity = 1.0)
+        )
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", cat.id))
 
         repo.deleteAll(listOf(cat.id))
 
         assertTrue(repo.getAll().isEmpty())
-        assertEquals(null, db.productDao().getAll().first().first { it.id == "p1" }.categoryId)
-        assertEquals(null, db.productDao().getAll().first().first { it.id == "p2" }.categoryId)
+        assertNull(db.listDao().getById("l1")!!.items.first { it.id == itemId }.categoryId)
+        assertNull(db.productLastCategoryDao().getByProductId("p1"))
     }
 
     @Test
     fun `deleteAll keeps history category codes intact`() = runTest {
         val cat = repo.create("Abarrotes")
-        db.productDao().insert(ProductEntity("p1", "Arroz", "u", categoryId = cat.id))
+        db.productDao().insert(ProductEntity("p1", "Arroz", "u"))
         db.purchaseHistoryDao().insertHistory(PurchaseHistoryEntity("h1", "Lista", "$", 0L, 10.0, 1))
         db.purchaseHistoryDao().insertItems(
             listOf(

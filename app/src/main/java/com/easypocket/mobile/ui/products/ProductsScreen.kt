@@ -15,9 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -60,14 +56,12 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.easypocket.mobile.domain.ListLogic
-import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.Store
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
 import com.easypocket.mobile.ui.components.AppButton
-import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
@@ -102,7 +96,6 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
 
     var searchText by rememberSaveable { mutableStateOf("") }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
-    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val backStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(refreshTick) { vm.refresh() }
@@ -134,9 +127,6 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                 language = language,
             )
         } else {
-            val activeCategory = uiState.selectedCategoryId?.let { id ->
-                uiState.categories.firstOrNull { it.id == id }
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,16 +139,6 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
                     placeholder = t("search.products", language),
                     modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(8.dp))
-                if (activeCategory != null) {
-                    FilterChipButton(text = activeCategory.name, onClick = { showFilterSheet = true })
-                } else {
-                    IconButtonCircle(
-                        icon = Icons.Default.FilterList,
-                        onClick = { showFilterSheet = true },
-                        variant = ButtonVariant.SECONDARY,
-                    )
-                }
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -189,15 +169,6 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
             }
         }
     }
-
-    ProductFilterSheet(
-        visible = showFilterSheet,
-        categories = uiState.categories,
-        activeCategoryId = uiState.selectedCategoryId,
-        language = language,
-        onSelectCategory = { id -> vm.setCategoryFilter(id) },
-        onDismiss = { showFilterSheet = false },
-    )
 
     ConfirmSheet(
         visible = showDeleteSheet,
@@ -284,7 +255,6 @@ private fun ProductsList(
                         product = product,
                         isSelectionMode = uiState.isSelectionMode,
                         isSelected = product.id in uiState.selection,
-                        category = uiState.categories.firstOrNull { it.id == product.categoryId },
                         language = language,
                         expanded = expanded,
                         onToggleExpanded = { expanded = !expanded },
@@ -307,7 +277,6 @@ private fun ProductCardContent(
     product: Product,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    category: Category?,
     language: Language,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
@@ -332,10 +301,6 @@ private fun ProductCardContent(
             )
             Spacer(Modifier.height(4.dp))
             Row {
-                if (category != null) {
-                    Tag(text = "${category.icon} ${category.name}", size = TagSize.SM)
-                    Spacer(Modifier.width(6.dp))
-                }
                 Tag(
                     text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
                     size = TagSize.SM,
@@ -398,96 +363,6 @@ private fun ProductPricesList(product: Product, stores: List<Store>) {
 }
 
 private fun formatAmount(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ProductFilterSheet(
-    visible: Boolean,
-    categories: List<Category>,
-    activeCategoryId: String?,
-    language: Language,
-    onSelectCategory: (String?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AppBottomSheet(visible = visible, onDismiss = onDismiss, title = t("listDetail.filterTitle", language)) {
-        FilterSectionHeader(t("listDetail.filterCategories", language))
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterOptionChip(
-                text = t("listDetail.filterAllCategories", language),
-                selected = activeCategoryId == null,
-                onClick = { onSelectCategory(null) },
-            )
-            categories.forEach { category ->
-                FilterOptionChip(
-                    text = "${category.icon} ${category.name}",
-                    selected = activeCategoryId == category.id,
-                    onClick = { onSelectCategory(category.id) },
-                )
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun FilterSectionHeader(text: String) {
-    val appColors = LocalAppColors.current
-    Text(
-        text = text,
-        color = appColors.textSecondary,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.sp,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun FilterOptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
-    val appColors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(if (selected) appColors.primary else Color.Transparent)
-            .border(1.dp, if (selected) Color.Transparent else appColors.border, RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = text,
-            color = if (selected) Color.White else appColors.textSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
-private fun FilterChipButton(text: String, onClick: () -> Unit) {
-    val appColors = LocalAppColors.current
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(appColors.primary)
-            .clickable(onClick = onClick)
-            .height(IntrinsicSize.Min)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
 
 @Composable
 private fun SelectionCircle(isSelected: Boolean, appColors: com.easypocket.mobile.ui.theme.AppColors) {

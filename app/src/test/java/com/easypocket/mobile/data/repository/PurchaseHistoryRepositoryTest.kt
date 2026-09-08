@@ -82,7 +82,7 @@ class PurchaseHistoryRepositoryTest {
 
     @Test
     fun `archiveCompleted assigns a unique item uid per item`() = runTest {
-        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt"))
         db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
         db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, quantity = 1.0, done = true))
         db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, quantity = 2.0, done = true))
@@ -98,10 +98,10 @@ class PurchaseHistoryRepositoryTest {
 
     @Test
     fun `archiveCompleted records the category code of each item`() = runTest {
-        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
-        db.productDao().insert(ProductEntity("p2", "Bread", "u", categoryId = null))
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u"))
         db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
-        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, quantity = 1.0, done = true))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "ABC123", quantity = 1.0, done = true))
         db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p2", storeId = null, quantity = 1.0, done = true))
 
         repo.archiveCompleted("l1")

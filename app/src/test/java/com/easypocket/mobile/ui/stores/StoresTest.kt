@@ -41,7 +41,7 @@ class StoresTest {
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
-        productsRepository = ProductRepository(db.productDao(), db.priceDao())
+        productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db.listDao())
         Seeder(db).seedIfEmpty()
     }

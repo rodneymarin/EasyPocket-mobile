@@ -63,6 +63,7 @@ import com.easypocket.mobile.ui.products.ProductPickerSheet
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
+import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.Store
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -184,6 +185,15 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                 stores = uiState.stores,
                 selectedStoreId = uiState.storeId,
                 onSelect = { id -> vm.setStore(id) },
+            )
+
+            Spacer(Modifier.height(16.dp))
+            FieldLabel(t("products.categoryLabel", language))
+            Spacer(Modifier.height(8.dp))
+            CategoryTagSelector(
+                categories = uiState.categories,
+                selectedCategoryId = uiState.categoryId,
+                onSelect = { id -> vm.setCategory(id) },
             )
 
             Spacer(Modifier.height(20.dp))
@@ -357,6 +367,44 @@ private fun StoreTagSelector(
                 Text(
                     text = store.description,
                     color = StoreColors.textColor(store.color, isDark),
+                    fontSize = 13.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CategoryTagSelector(
+    categories: List<Category>,
+    selectedCategoryId: String?,
+    onSelect: (String?) -> Unit,
+) {
+    val appColors = LocalAppColors.current
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        categories.forEach { category ->
+            val selected = category.id == selectedCategoryId
+            val shape = RoundedCornerShape(999.dp)
+            Box(
+                modifier = Modifier
+                    .border(2.dp, if (selected) appColors.primary else Color.Transparent, shape)
+                    .padding(2.dp)
+                    .clip(shape)
+                    .background(
+                        if (selected) appColors.primary.copy(alpha = 0.15f) else appColors.inputBackground
+                    )
+                    .clickable { onSelect(if (selected) null else category.id) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            ) {
+                Text(
+                    text = "${category.icon} ${category.name}",
+                    color = if (selected) appColors.primary else appColors.text,
                     fontSize = 13.sp,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 )

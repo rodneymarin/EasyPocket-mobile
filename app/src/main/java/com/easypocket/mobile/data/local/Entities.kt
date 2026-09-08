@@ -25,7 +25,13 @@ data class ProductEntity(
     @PrimaryKey val id: String,
     @ColumnInfo(name = "product_name") val productName: String,
     @ColumnInfo(name = "unit_of_measurement") val unitOfMeasurement: String,
-    @ColumnInfo(name = "category_id") val categoryId: String? = null,
+)
+
+@Entity(tableName = "product_last_categories")
+data class ProductLastCategoryEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "product_id") val productId: String,
+    @ColumnInfo(name = "category_id") val categoryId: String,
 )
 
 @Entity(
@@ -61,13 +67,14 @@ data class ShoppingListEntity(
         ForeignKey(entity = StoreEntity::class, parentColumns = ["id"],
             childColumns = ["store_id"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("shopping_list_id"), Index("product_id"), Index("store_id")],
+    indices = [Index("shopping_list_id"), Index("product_id"), Index("store_id"), Index("category_id")],
 )
 data class ShoppingListItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "shopping_list_id") val shoppingListId: String,
     @ColumnInfo(name = "product_id") val productId: String,
     @ColumnInfo(name = "store_id") val storeId: String?,
+    @ColumnInfo(name = "category_id") val categoryId: String? = null,
     val quantity: Double,
     val done: Boolean = false,
     val pinned: Boolean = false,

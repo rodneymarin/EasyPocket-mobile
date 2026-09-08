@@ -46,8 +46,7 @@ data class ListDetailUiState(
 
     private fun matchesFilters(item: ShoppingListItem): Boolean {
         val storeMatch = storeFilter == null || item.storeId == storeFilter
-        val categoryMatch = categoryFilter == null ||
-            productsById[item.productId]?.categoryId == categoryFilter
+        val categoryMatch = categoryFilter == null || item.categoryId == categoryFilter
         return storeMatch && categoryMatch
     }
 
@@ -92,7 +91,7 @@ data class ListDetailUiState(
     val filterCategories: List<Category>
         get() {
             val usedIds = list?.items
-                ?.mapNotNull { productsById[it.productId]?.categoryId }
+                ?.mapNotNull { it.categoryId }
                 ?.toSet() ?: emptySet()
             return categoriesById.values
                 .filter { it.id in usedIds }
@@ -286,7 +285,7 @@ class ListDetailViewModel @Inject constructor(
         }
         val categoryFilter = state.categoryFilter
         if (categoryFilter != null &&
-            current.items.none { state.productsById[it.productId]?.categoryId == categoryFilter }
+            current.items.none { it.categoryId == categoryFilter }
         ) {
             _uiState.value = _uiState.value.copy(categoryFilter = null)
         }

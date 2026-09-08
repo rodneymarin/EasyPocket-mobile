@@ -24,7 +24,7 @@ object ListLogic {
         categoryFilter: String?,
     ): Boolean =
         (storeFilter == null || item.storeId == storeFilter) &&
-            (categoryFilter == null || productsById[item.productId]?.categoryId == categoryFilter)
+            (categoryFilter == null || item.categoryId == categoryFilter)
 
     fun totalAmount(
         list: ShoppingList,
@@ -62,7 +62,7 @@ object ListLogic {
             compareByDescending<ShoppingListItem> { it.pinned }
                 .thenBy { normalize(productsById[it.productId]?.productName ?: "") },
         )
-        val groups = items.groupBy { productsById[it.productId]?.categoryId }
+        val groups = items.groupBy { it.categoryId }
         val sections = groups.filterKeys { it != null }.map { (categoryId, group) ->
             ItemSection(categoriesById[categoryId], sortGroup(group))
         }.sortedWith(Alphabet.comparator { it.category?.name ?: "" })

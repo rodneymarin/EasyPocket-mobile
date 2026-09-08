@@ -4,7 +4,8 @@ import androidx.room.withTransaction
 import com.easypocket.mobile.data.local.CategoryDao
 import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
-import com.easypocket.mobile.data.local.ProductDao
+import com.easypocket.mobile.data.local.ProductLastCategoryDao
+import com.easypocket.mobile.data.local.ShoppingListDao
 import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListIcon
@@ -19,7 +20,8 @@ import kotlinx.coroutines.flow.map
 class CategoryRepository @Inject constructor(
     private val db: EasyPocketDatabase,
     private val categoryDao: CategoryDao,
-    private val productDao: ProductDao,
+    private val listDao: ShoppingListDao,
+    private val lastCategoryDao: ProductLastCategoryDao,
 ) {
 
     fun observeAll(): Flow<List<Category>> =
@@ -44,7 +46,8 @@ class CategoryRepository @Inject constructor(
 
     suspend fun deleteAll(ids: List<String>) {
         db.withTransaction {
-            productDao.clearCategory(ids)
+            listDao.clearCategory(ids)
+            lastCategoryDao.deleteForCategories(ids)
             categoryDao.deleteByIds(ids)
         }
     }

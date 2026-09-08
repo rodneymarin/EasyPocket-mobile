@@ -54,7 +54,7 @@ class PurchaseHistoryRepository @Inject constructor(
                     quantity = item.quantity,
                     unitPrice = unitPrice,
                     totalPrice = unitPrice * item.quantity,
-                    categoryCode = products[item.productId]?.categoryId,
+                    categoryCode = item.categoryId,
                     itemUid = UUID.randomUUID().toString(),
                 )
             }

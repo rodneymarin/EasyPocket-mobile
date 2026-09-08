@@ -45,7 +45,7 @@ class HistoryViewModelTest {
             priceDao = db.priceDao(),
             storeDao = db.storeDao(),
         )
-        return HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.productDao()))
+        return HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao()))
     }
 
     private fun entity(date: String, total: Double) = PurchaseHistoryEntity(
@@ -85,7 +85,7 @@ class HistoryViewModelTest {
         db.purchaseHistoryDao().insertHistory(
             PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)
         )
-        val vm = HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.productDao()))
+        val vm = HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao()))
         awaitRecordCount(vm, 1)
 
         vm.deleteRecord("h1")

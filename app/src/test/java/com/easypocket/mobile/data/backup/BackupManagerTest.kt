@@ -6,9 +6,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListEntity
+import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -193,9 +195,14 @@ class BackupManagerTest {
     }
 
     @Test
-    fun `export and import preserve categories and category codes`() = runTest {
+    fun `export and import preserve categories, item categories and last categories`() = runTest {
         db.categoryDao().insert(CategoryEntity("ABC123", "Abarrotes"))
-        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt"))
+        db.listDao().insert(ShoppingListEntity("l1", "Compras"))
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", "ABC123"))
+        db.listDao().insertItem(
+            ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "ABC123", quantity = 1.0)
+        )
         db.purchaseHistoryDao().insertHistory(PurchaseHistoryEntity("h1", "Compras", "🛒", 1L, 10.0, 1))
         db.purchaseHistoryDao().insertItems(
             listOf(
@@ -208,13 +215,31 @@ class BackupManagerTest {
         )
 
         val json = manager.exportToString()
+        assertTrue(json.contains("\"lastCategories\""))
         db.clearAllTables()
         manager.importData(manager.parse(json).getOrThrow())
 
         assertEquals("Abarrotes", db.categoryDao().getById("ABC123")!!.name)
-        assertEquals("ABC123", db.productDao().getAll().first().first { it.id == "p1" }.categoryId)
-        val items = db.purchaseHistoryDao().observeAll().first().first().items
-        assertEquals("ABC123", items.first().categoryCode)
+        assertEquals("ABC123", db.productLastCategoryDao().getByProductId("p1")!!.categoryId)
+        val item = db.listDao().getById("l1")!!.items.first()
+        assertEquals("ABC123", item.categoryId)
+        val historyItems = db.purchaseHistoryDao().observeAll().first().first().items
+        assertEquals("ABC123", historyItems.first().categoryCode)
+    }
+
+    @Test
+    fun `import legacy v1 backup maps product category to remembered last category`() = runTest {
+        val legacyJson = """
+            {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],
+             "categories":[{"id":"ABC123","name":"Abarrotes"}],
+             "products":[{"id":"p1","productName":"Milk","unitOfMeasurement":"lt","categoryId":"ABC123"}],
+             "prices":[],"shoppingLists":[],"listItems":[]}
+        """.trimIndent()
+
+        manager.importData(manager.parse(legacyJson).getOrThrow())
+
+        assertEquals("Milk", db.productDao().getAll().first().first { it.id == "p1" }.productName)
+        assertEquals("ABC123", db.productLastCategoryDao().getByProductId("p1")!!.categoryId)
     }
 
     @Test

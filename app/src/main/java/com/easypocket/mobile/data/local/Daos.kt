@@ -64,9 +64,27 @@ interface ProductDao {
 
     @Query("DELETE FROM products WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>)
+}
 
-    @Query("UPDATE products SET category_id = NULL WHERE category_id IN (:categoryIds)")
-    suspend fun clearCategory(categoryIds: List<String>)
+@Dao
+interface ProductLastCategoryDao {
+    @Query("SELECT * FROM product_last_categories")
+    fun getAll(): Flow<List<ProductLastCategoryEntity>>
+
+    @Query("SELECT * FROM product_last_categories WHERE product_id = :productId LIMIT 1")
+    suspend fun getByProductId(productId: String): ProductLastCategoryEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(record: ProductLastCategoryEntity)
+
+    @Query("DELETE FROM product_last_categories WHERE product_id = :productId")
+    suspend fun deleteForProduct(productId: String)
+
+    @Query("DELETE FROM product_last_categories WHERE product_id IN (:productIds)")
+    suspend fun deleteForProducts(productIds: List<String>)
+
+    @Query("DELETE FROM product_last_categories WHERE category_id IN (:categoryIds)")
+    suspend fun deleteForCategories(categoryIds: List<String>)
 }
 
 @Dao
@@ -109,8 +127,11 @@ interface ShoppingListDao {
     @Update
     suspend fun updateItem(item: ShoppingListItemEntity)
 
-    @Query("UPDATE shopping_list_items SET product_id = :productId, store_id = :storeId, quantity = :quantity, done = :done, pinned = :pinned WHERE id = :id")
-    suspend fun updateItemFields(id: Long, productId: String, storeId: String?, quantity: Double, done: Boolean, pinned: Boolean)
+    @Query("UPDATE shopping_list_items SET product_id = :productId, store_id = :storeId, category_id = :categoryId, quantity = :quantity, done = :done, pinned = :pinned WHERE id = :id")
+    suspend fun updateItemFields(id: Long, productId: String, storeId: String?, categoryId: String?, quantity: Double, done: Boolean, pinned: Boolean)
+
+    @Query("UPDATE shopping_list_items SET category_id = NULL WHERE category_id IN (:categoryIds)")
+    suspend fun clearCategory(categoryIds: List<String>)
 
     @Query("UPDATE shopping_list_items SET done = :done WHERE id = :id")
     suspend fun toggleItemDone(id: Long, done: Boolean)

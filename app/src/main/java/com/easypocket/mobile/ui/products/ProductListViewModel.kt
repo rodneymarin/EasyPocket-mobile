@@ -1,10 +1,8 @@
 package com.easypocket.mobile.ui.products
 
 import androidx.lifecycle.ViewModel
-import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.StoreRepository
-import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Product
 import com.easypocket.mobile.domain.Store
@@ -17,9 +15,7 @@ import kotlinx.coroutines.flow.update
 
 data class ProductListUiState(
     val products: List<Product> = emptyList(),
-    val categories: List<Category> = emptyList(),
     val stores: List<Store> = emptyList(),
-    val selectedCategoryId: String? = null,
     val search: String = "",
     val filtered: List<Product> = emptyList(),
     val selection: Set<String> = emptySet(),
@@ -31,7 +27,6 @@ data class ProductListUiState(
 @HiltViewModel
 class ProductListViewModel @Inject constructor(
     private val productsRepository: ProductRepository,
-    private val categoriesRepository: CategoryRepository,
     private val storesRepository: StoreRepository,
 ) : ViewModel() {
 
@@ -41,13 +36,11 @@ class ProductListViewModel @Inject constructor(
     suspend fun refresh() {
         try {
             val products = productsRepository.getAll()
-            val categories = categoriesRepository.getAll()
             val stores = storesRepository.getAll()
             _uiState.value = _uiState.value.copy(
                 products = products,
-                categories = categories,
                 stores = stores,
-                filtered = filter(products, _uiState.value.search, _uiState.value.selectedCategoryId),
+                filtered = filter(products, _uiState.value.search),
                 isLoading = false,
             )
         } catch (t: Throwable) {
@@ -57,13 +50,7 @@ class ProductListViewModel @Inject constructor(
 
     fun setSearch(query: String) {
         _uiState.update {
-            it.copy(search = query, filtered = filter(it.products, query, it.selectedCategoryId))
-        }
-    }
-
-    fun setCategoryFilter(categoryId: String?) {
-        _uiState.update {
-            it.copy(selectedCategoryId = categoryId, filtered = filter(it.products, it.search, categoryId))
+            it.copy(search = query, filtered = filter(it.products, query))
         }
     }
 
@@ -87,14 +74,9 @@ class ProductListViewModel @Inject constructor(
         refresh()
     }
 
-    private fun filter(products: List<Product>, query: String, categoryId: String?): List<Product> {
-        val byCategory = if (categoryId == null) {
-            products
-        } else {
-            products.filter { it.categoryId == categoryId }
-        }
+    private fun filter(products: List<Product>, query: String): List<Product> {
         val normalized = ListLogic.normalize(query.trim())
-        if (normalized.isEmpty()) return byCategory
-        return byCategory.filter { ListLogic.normalize(it.productName).contains(normalized) }
+        if (normalized.isEmpty()) return products
+        return products.filter { ListLogic.normalize(it.productName).contains(normalized) }
     }
 }

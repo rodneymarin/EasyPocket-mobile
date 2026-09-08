@@ -30,7 +30,7 @@ class RepositoriesTest {
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
         stores = StoreRepository(db.storeDao())
-        products = ProductRepository(db.productDao(), db.priceDao())
+        products = ProductRepository(db, db.productDao(), db.priceDao())
         lists = ShoppingListRepository(db.listDao())
     }
 

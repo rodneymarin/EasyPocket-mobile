@@ -14,6 +14,7 @@ data class BackupData(
     val listItems: List<BackupListItem>,
     val purchaseHistory: List<BackupPurchaseHistory> = emptyList(),
     val purchaseHistoryItems: List<BackupPurchaseHistoryItem> = emptyList(),
+    val lastCategories: List<BackupProductLastCategory> = emptyList(),
 )
 
 @Serializable
@@ -35,7 +36,15 @@ data class BackupProduct(
     val id: String,
     val productName: String,
     val unitOfMeasurement: String,
+    // Kept for backward compatibility with version 1 backups. In version 2
+    // products no longer carry a category; it is exported to lastCategories.
     val categoryId: String? = null,
+)
+
+@Serializable
+data class BackupProductLastCategory(
+    val productId: String,
+    val categoryId: String,
 )
 
 @Serializable
@@ -58,6 +67,7 @@ data class BackupListItem(
     val shoppingListId: String,
     val productId: String,
     val storeId: String? = null,
+    val categoryId: String? = null,
     val quantity: Double,
     val done: Boolean = false,
     val pinned: Boolean = false,

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -206,17 +207,39 @@ class DatabaseTest {
     }
 
     @Test
-    fun `clearCategory nulls category_id only for matching products`() = runTest {
-        db.productDao().insert(ProductEntity("p1", "Milk", "lt", categoryId = "ABC123"))
-        db.productDao().insert(ProductEntity("p2", "Bread", "u", categoryId = "XYZ789"))
-        db.productDao().insert(ProductEntity("p3", "Rice", "u", categoryId = null))
+    fun `clearCategory nulls category_id only for matching list items`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "lt"))
+        db.listDao().insert(ShoppingListEntity("l1", "A"))
+        val id1 = db.listDao().insertItem(
+            ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "ABC123", quantity = 1.0)
+        )
+        val id2 = db.listDao().insertItem(
+            ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "XYZ789", quantity = 1.0)
+        )
 
-        db.productDao().clearCategory(listOf("ABC123"))
+        db.listDao().clearCategory(listOf("ABC123"))
 
-        val products = db.productDao().getAll().first().associateBy { it.id }
-        assertNull(products.getValue("p1").categoryId)
-        assertEquals("XYZ789", products.getValue("p2").categoryId)
-        assertNull(products.getValue("p3").categoryId)
+        val items = db.listDao().getById("l1")!!.items.associateBy { it.id }
+        assertNull(items.getValue(id1).categoryId)
+        assertEquals("XYZ789", items.getValue(id2).categoryId)
+    }
+
+    @Test
+    fun `last category dao upserts replaces and deletes`() = runTest {
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", "ABC123"))
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", "XYZ789"))
+        db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p2", "ABC123"))
+
+        assertEquals("XYZ789", db.productLastCategoryDao().getByProductId("p1")!!.categoryId)
+        assertEquals("ABC123", db.productLastCategoryDao().getByProductId("p2")!!.categoryId)
+        assertNull(db.productLastCategoryDao().getByProductId("p3"))
+
+        db.productLastCategoryDao().deleteForCategories(listOf("ABC123"))
+        assertNull(db.productLastCategoryDao().getByProductId("p2"))
+        assertEquals("XYZ789", db.productLastCategoryDao().getByProductId("p1")!!.categoryId)
+
+        db.productLastCategoryDao().deleteForProduct("p1")
+        assertNull(db.productLastCategoryDao().getByProductId("p1"))
     }
 
     @Test
@@ -307,6 +330,107 @@ class DatabaseTest {
         db.query("SELECT icon FROM categories WHERE id = 'ABC123'").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals("$", cursor.getString(0))
+        }
+        helper.close()
+    }
+
+    @Test
+    fun `migration 6 to 7 moves product categories to last categories and adds item category`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(6) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE stores (id TEXT NOT NULL PRIMARY KEY, description TEXT NOT NULL, color INTEGER NOT NULL)")
+                        db.execSQL("CREATE TABLE categories (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, icon TEXT NOT NULL)")
+                        db.execSQL("CREATE INDEX index_categories_name ON categories (name)")
+                        db.execSQL(
+                            "CREATE TABLE products (" +
+                                "id TEXT NOT NULL PRIMARY KEY, " +
+                                "product_name TEXT NOT NULL, " +
+                                "unit_of_measurement TEXT NOT NULL, " +
+                                "category_id TEXT)"
+                        )
+                        db.execSQL("CREATE INDEX index_products_product_name ON products (product_name)")
+                        db.execSQL(
+                            "CREATE TABLE product_prices (" +
+                                "product_id TEXT NOT NULL, store_id TEXT NOT NULL, value REAL NOT NULL, " +
+                                "PRIMARY KEY(product_id, store_id), " +
+                                "FOREIGN KEY(product_id) REFERENCES products(id) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                                "FOREIGN KEY(store_id) REFERENCES stores(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                        )
+                        db.execSQL("CREATE TABLE shopping_lists (id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, icon TEXT NOT NULL)")
+                        db.execSQL(
+                            "CREATE TABLE shopping_list_items (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "shopping_list_id TEXT NOT NULL, product_id TEXT NOT NULL, store_id TEXT, " +
+                                "quantity REAL NOT NULL, done INTEGER NOT NULL, pinned INTEGER NOT NULL, " +
+                                "FOREIGN KEY(shopping_list_id) REFERENCES shopping_lists(id) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                                "FOREIGN KEY(product_id) REFERENCES products(id) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                                "FOREIGN KEY(store_id) REFERENCES stores(id) ON UPDATE NO ACTION ON DELETE SET NULL)"
+                        )
+                        db.execSQL("CREATE INDEX index_shopping_list_items_shopping_list_id ON shopping_list_items (shopping_list_id)")
+                        db.execSQL("CREATE INDEX index_shopping_list_items_product_id ON shopping_list_items (product_id)")
+                        db.execSQL("CREATE INDEX index_shopping_list_items_store_id ON shopping_list_items (store_id)")
+
+                        db.execSQL("INSERT INTO stores (id, description, color) VALUES ('s1', 'Store 1', 0)")
+                        db.execSQL("INSERT INTO categories (id, name, icon) VALUES ('ABC123', 'Abarrotes', 'X')")
+                        db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement, category_id) VALUES ('p1', 'Milk', 'lt', 'ABC123')")
+                        db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement, category_id) VALUES ('p2', 'Bread', 'u', 'XYZ789')")
+                        db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement, category_id) VALUES ('p3', 'Rice', 'u', NULL)")
+                        db.execSQL("INSERT INTO product_prices (product_id, store_id, value) VALUES ('p1', 's1', 10.0)")
+                        db.execSQL("INSERT INTO shopping_lists (id, title, icon) VALUES ('l1', 'Lista', '$')")
+                        db.execSQL(
+                            "INSERT INTO shopping_list_items (id, shopping_list_id, product_id, store_id, quantity, done, pinned) " +
+                                "VALUES (1, 'l1', 'p1', 's1', 2.0, 0, 0)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_6_7.migrate(db)
+
+        // products loses the category column but keeps its rows
+        db.query("SELECT product_name, unit_of_measurement FROM products WHERE id = 'p1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Milk", cursor.getString(0))
+        }
+        db.query("SELECT COUNT(*) FROM products").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(3, cursor.getInt(0))
+        }
+
+        // existing product categories become the remembered last category
+        db.query("SELECT product_id, category_id FROM product_last_categories ORDER BY product_id").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("p1", cursor.getString(0))
+            assertEquals("ABC123", cursor.getString(1))
+            assertTrue(cursor.moveToNext())
+            assertEquals("p2", cursor.getString(0))
+            assertEquals("XYZ789", cursor.getString(1))
+            assertFalse(cursor.moveToNext())
+        }
+
+        // prices are preserved
+        db.query("SELECT value FROM product_prices WHERE product_id = 'p1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(10.0, cursor.getDouble(0), 0.001)
+        }
+
+        // list items keep their data and start without a category
+        db.query("SELECT product_id, store_id, category_id, quantity, done, pinned FROM shopping_list_items WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("p1", cursor.getString(0))
+            assertEquals("s1", cursor.getString(1))
+            assertNull(cursor.getString(2))
+            assertEquals(2.0, cursor.getDouble(3), 0.001)
+            assertEquals(0, cursor.getInt(4))
+            assertEquals(0, cursor.getInt(5))
         }
         helper.close()
     }
