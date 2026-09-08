@@ -37,7 +37,21 @@ class SeederTest {
         seeder.seedIfEmpty()
         assertEquals(2, db.storeDao().getAll().first().size)
         assertEquals(10, db.productDao().getAll().first().size)
+        assertEquals(4, db.categoryDao().getAll().first().size)
+        assertEquals(10, db.productLastCategoryDao().getAll().first().size)
         assertEquals(3, db.listDao().getAll().first().size)
+    }
+
+    @Test
+    fun `seed items carry their category and products remember last category`() = runTest {
+        seeder.seedIfEmpty()
+        val items = db.listDao().getAll().first().flatMap { it.items }
+        assertEquals(10, items.size)
+        assertEquals(10, items.count { it.categoryId != null })
+        val lastCategories = db.productLastCategoryDao().getAll().first().associate { it.productId to it.categoryId }
+        items.forEach { item ->
+            assertEquals(lastCategories[item.productId], item.categoryId)
+        }
     }
 
     @Test

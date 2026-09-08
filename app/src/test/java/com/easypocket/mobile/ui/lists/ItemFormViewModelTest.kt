@@ -297,6 +297,7 @@ class ItemFormViewModelTest {
         val cat = categoryRepository.create("Verduras")
         val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
         lastCategories.set("prod-001", cat.id)
+        db.productLastCategoryDao().deleteForProduct("prod-002")
 
         val vm = vm()
         vm.load("0oasidu0as9dua0sd", -1)

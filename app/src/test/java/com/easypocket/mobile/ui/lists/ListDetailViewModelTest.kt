@@ -10,6 +10,7 @@ import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.PurchaseHistoryRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
+import com.easypocket.mobile.data.seed.SeedData
 import com.easypocket.mobile.data.seed.Seeder
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.i18n.Language
@@ -137,7 +138,10 @@ class ListDetailViewModelTest {
         val lecheItem = listsRepository.getById(lecheList)!!.items.first { it.productId == "prod-004" }
         listsRepository.updateItem(lecheItem.copy(categoryId = cat2.id))
         vm.load("0oasidu0as9dua0sd")
-        assertEquals(setOf(cat1.id), vm.uiState.value.filterCategories.map { it.id }.toSet())
+        // the seeded items of this list already use the seeded Verdures category;
+        // papa now uses cat1, and cat2 (other list) must not show up here
+        val seededVerduras = SeedData.categories.first { it.name == "Verduras" }.id
+        assertEquals(setOf(seededVerduras, cat1.id), vm.uiState.value.filterCategories.map { it.id }.toSet())
     }
 
     @Test
