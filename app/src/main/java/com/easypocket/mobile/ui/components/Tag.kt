@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.ui.theme.LocalAppColors
@@ -62,6 +63,12 @@ private fun TagContent(text: String, textColor: Color, isSmall: Boolean, leading
             leading()
             Spacer(Modifier.width(4.dp))
         }
-        Text(text, color = textColor, fontSize = if (isSmall) 11.sp else 13.sp)
+        Text(
+            text,
+            color = textColor,
+            fontSize = if (isSmall) 11.sp else 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

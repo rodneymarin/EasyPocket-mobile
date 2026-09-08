@@ -903,24 +903,36 @@ private fun DetailItemCardContent(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (store != null) {
-                            Tag(
-                                text = store.description,
-                                color = if (item.done) null else StoreColors.get(store.color, isDark),
-                                size = TagSize.SM,
-                            )
-                        } else {
-                            StorelessTag(text = t("listDetail.noStore", language), appColors = appColors)
+                        Box(Modifier.weight(1f)) {
+                            if (store != null) {
+                                Tag(
+                                    text = store.description,
+                                    color = if (item.done) null else StoreColors.get(store.color, isDark),
+                                    size = TagSize.SM,
+                                )
+                            } else {
+                                StorelessTag(text = t("listDetail.noStore", language), appColors = appColors)
+                            }
                         }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = buildString {
+                                if (price * item.quantity > 0) {
+                                    append("$")
+                                    append(formatAmount(price * item.quantity))
+                                    append(" | ")
+                                }
+                                append(ListLogic.trimQuantity(item.quantity))
+                                append(" ")
+                                append(unitLabel)
+                            },
+                            color = if (item.done) appColors.placeholderText else appColors.text,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                }
-                Spacer(Modifier.width(6.dp))
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
-                    if (price * item.quantity > 0) {
-                        Tag(text = "$${formatAmount(price * item.quantity)}", size = TagSize.SM)
-                        Spacer(Modifier.height(2.dp))
-                    }
-                    Tag(text = "${ListLogic.trimQuantity(item.quantity)} $unitLabel", size = TagSize.SM)
                 }
                 Spacer(Modifier.width(6.dp))
                 if (!isSelectionMode) {
@@ -948,8 +960,8 @@ private fun CheckCircle(done: Boolean, onToggle: () -> Unit, textColor: Color) {
         modifier = Modifier
             .size(24.dp)
             .clip(CircleShape)
-            .background(if (done) textColor else Color.Transparent)
-            .border(if (done) 0.dp else 2.dp, if (done) textColor else appColors.textSecondary, CircleShape)
+            .background(if (done) appColors.textSecondary.copy(alpha = 0.35f) else Color.Transparent)
+            .border(if (done) 0.dp else 1.dp, if (done) Color.Transparent else appColors.primary, CircleShape)
             .clickable(onClick = onToggle),
         contentAlignment = Alignment.Center,
     ) {
