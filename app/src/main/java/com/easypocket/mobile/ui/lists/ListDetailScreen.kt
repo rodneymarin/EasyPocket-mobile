@@ -1,6 +1,12 @@
 package com.easypocket.mobile.ui.lists
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +17,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -60,8 +68,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -102,6 +112,7 @@ import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -713,6 +724,22 @@ private fun ItemsList(
 ) {
     val appColors = LocalAppColors.current
     val listState = rememberLazyListState()
+    var flyingItemId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(flyingItemId) {
+        if (flyingItemId != null) {
+            delay(900)
+            flyingItemId = null
+        }
+    }
+    val handleToggleDone: (ShoppingListItem) -> Unit = { item ->
+        flyingItemId = item.id
+        onToggleDone(item)
+    }
+    val placementSpec = spring(
+        dampingRatio = 0.6f,
+        stiffness = Spring.StiffnessMediumLow,
+        visibilityThreshold = IntOffset.VisibilityThreshold,
+    )
     val highlightedItemId = rememberHighlightedNewItemId(
         navBackStackEntry = navBackStackEntry,
         displayedIds = uiState.pendingItems.map { it.id },
@@ -740,59 +767,109 @@ private fun ItemsList(
                 uiState.pendingSections.forEach { section ->
                     section.category?.let { category ->
                         item(key = "category_${category.id}") {
-                            CategorySectionHeader(icon = category.icon, name = category.name)
+                            Box(Modifier.animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec)) {
+                                CategorySectionHeader(icon = category.icon, name = category.name)
+                            }
                         }
                     } ?: item(key = "category_none") {
-                        CategorySectionHeader(icon = null, name = t("listDetail.noCategory", language))
+                        Box(Modifier.animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec)) {
+                            CategorySectionHeader(icon = null, name = t("listDetail.noCategory", language))
+                        }
                     }
                     itemsIndexed(section.items, key = { _, item -> item.id }) { index, item ->
-                        ListItemRow(
-                            onClick = { onItemPress(item) },
-                            onLongClick = { onItemLongPress(item) },
-                            isFirst = index == 0,
-                            isLast = index == section.items.lastIndex,
-                            backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
-                            highlighted = item.id == highlightedItemId,
+                        val isFlying = flyingItemId == item.id
+                        FlyingItemContainer(
+                            isFlying = isFlying,
+                            modifier = Modifier
+                                .zIndex(if (isFlying) 1f else 0f)
+                                .animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec),
                         ) {
-                            DetailItemCardContent(
-                                item = item,
-                                productsById = uiState.productsById,
-                                stores = uiState.stores,
-                                isSelectionMode = uiState.isSelectionMode,
-                                isSelected = item.id in uiState.selection,
-                                language = language,
-                                onToggleDone = { onToggleDone(item) },
-                            )
+                            ListItemRow(
+                                onClick = { onItemPress(item) },
+                                onLongClick = { onItemLongPress(item) },
+                                isFirst = index == 0,
+                                isLast = index == section.items.lastIndex,
+                                backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                                highlighted = item.id == highlightedItemId,
+                            ) {
+                                DetailItemCardContent(
+                                    item = item,
+                                    productsById = uiState.productsById,
+                                    stores = uiState.stores,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = item.id in uiState.selection,
+                                    language = language,
+                                    onToggleDone = { handleToggleDone(item) },
+                                )
+                            }
                         }
                     }
                 }
                 if (hasDone) {
                     item(key = "done-section") {
-                        DoneSectionHeader(language = language)
+                        Box(Modifier.animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec)) {
+                            DoneSectionHeader(language = language)
+                        }
                     }
-                    itemsIndexed(uiState.doneItems, key = { _, item -> "done_${item.id}" }) { index, item ->
-                        ListItemRow(
-                            onClick = { onItemPress(item) },
-                            onLongClick = { onItemLongPress(item) },
-                            isFirst = index == 0,
-                            isLast = index == uiState.doneItems.lastIndex,
-                            backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                    itemsIndexed(uiState.doneItems, key = { _, item -> item.id }) { index, item ->
+                        val isFlying = flyingItemId == item.id
+                        FlyingItemContainer(
+                            isFlying = isFlying,
+                            modifier = Modifier
+                                .zIndex(if (isFlying) 1f else 0f)
+                                .animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec),
                         ) {
-                            DetailItemCardContent(
-                                item = item,
-                                productsById = uiState.productsById,
-                                stores = uiState.stores,
-                                isSelectionMode = uiState.isSelectionMode,
-                                isSelected = item.id in uiState.selection,
-                                language = language,
-                                onToggleDone = { onToggleDone(item) },
-                            )
+                            ListItemRow(
+                                onClick = { onItemPress(item) },
+                                onLongClick = { onItemLongPress(item) },
+                                isFirst = index == 0,
+                                isLast = index == uiState.doneItems.lastIndex,
+                                backgroundColor = if (item.id in uiState.selection) appColors.surface else null,
+                            ) {
+                                DetailItemCardContent(
+                                    item = item,
+                                    productsById = uiState.productsById,
+                                    stores = uiState.stores,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = item.id in uiState.selection,
+                                    language = language,
+                                    onToggleDone = { handleToggleDone(item) },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun FlyingItemContainer(
+    isFlying: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val lift = remember { Animatable(0f) }
+    LaunchedEffect(isFlying) {
+        if (isFlying) {
+            lift.animateTo(1f, tween(durationMillis = 180, easing = FastOutSlowInEasing))
+            lift.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow))
+        } else if (lift.value > 0f) {
+            lift.animateTo(0f, tween(durationMillis = 120))
+        }
+    }
+    Box(
+        modifier = modifier.graphicsLayer {
+            val scale = 1f + 0.05f * lift.value
+            scaleX = scale
+            scaleY = scale
+            shape = RoundedCornerShape(20.dp)
+            shadowElevation = lift.value * 18.dp.toPx()
+            clip = false
+        },
+        content = content,
+    )
 }
 
 @Composable
