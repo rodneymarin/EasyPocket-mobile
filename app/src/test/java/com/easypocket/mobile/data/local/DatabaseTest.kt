@@ -507,6 +507,63 @@ class DatabaseTest {
         assertTrue(db.purchaseHistoryDao().observeAll().first().isEmpty())
     }
 
+    @Test
+    fun `migration 8 to 9 backfills category totals from items and manual totals`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(8) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = createV8Schema(db)
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        // Priced purchase across two categories: h1 (CAT1 30.0, null 10.0)
+        db.execSQL("INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) VALUES ('h1', 'L1', '$', 0, 40.0, 3)")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h1', 'A', null, 2.0, 15.0, 30.0, 'CAT1', 'u1')")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h1', 'B', null, 1.0, 10.0, 10.0, null, 'u2')")
+        // Manual-total purchase, all items share CAT2: the whole total goes to CAT2
+        db.execSQL("INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) VALUES ('h2', 'L2', '$', 0, 50.0, 2)")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h2', 'C', null, 1.0, 0.0, 0.0, 'CAT2', 'u3')")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h2', 'D', null, 2.0, 0.0, 0.0, 'CAT2', 'u4')")
+        // Manual-total purchase with mixed categories: goes to no category
+        db.execSQL("INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) VALUES ('h3', 'L3', '$', 0, 30.0, 2)")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h3', 'E', null, 1.0, 0.0, 0.0, 'CAT1', 'u5')")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h3', 'F', null, 1.0, 0.0, 0.0, null, 'u6')")
+        // Manual-total purchase, all items without category: goes to no category
+        db.execSQL("INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) VALUES ('h4', 'L4', '$', 0, 10.0, 1)")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h4', 'G', null, 1.0, 0.0, 0.0, null, 'u7')")
+        // Zero-total purchase: no category total at all
+        db.execSQL("INSERT INTO purchase_history (id, list_title, list_icon, date, total_amount, item_count) VALUES ('h5', 'L5', '$', 0, 0.0, 1)")
+        db.execSQL("INSERT INTO purchase_history_items (history_id, product_name, store_name, quantity, unit_price, total_price, category_code, item_uid) VALUES ('h5', 'H', null, 1.0, 0.0, 0.0, 'CAT1', 'u8')")
+
+        EasyPocketDatabase.MIGRATION_8_9.migrate(db)
+
+        fun totalsOf(historyId: String): List<Pair<String?, Double>> {
+            val rows = mutableListOf<Pair<String?, Double>>()
+            db.query(
+                "SELECT category_code, total FROM purchase_history_category_totals " +
+                    "WHERE history_id = ? ORDER BY category_code IS NULL, category_code",
+                arrayOf(historyId)
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    rows.add(Pair(if (cursor.isNull(0)) null else cursor.getString(0), cursor.getDouble(1)))
+                }
+            }
+            return rows
+        }
+
+        assertEquals(listOf<Pair<String?, Double>>(Pair("CAT1", 30.0), Pair(null, 10.0)), totalsOf("h1"))
+        assertEquals(listOf<Pair<String?, Double>>(Pair("CAT2", 50.0)), totalsOf("h2"))
+        assertEquals(listOf<Pair<String?, Double>>(Pair(null, 30.0)), totalsOf("h3"))
+        assertEquals(listOf<Pair<String?, Double>>(Pair(null, 10.0)), totalsOf("h4"))
+        assertTrue(totalsOf("h5").isEmpty())
+        helper.close()
+    }
+
     // End-to-end guard: builds a database with the exact v7 schema that real
     // devices have (the result of running migrations 1..7), then opens it
     // through Room with the full migration chain. This fails if a migration
@@ -544,6 +601,7 @@ class DatabaseTest {
                 EasyPocketDatabase.MIGRATION_5_6,
                 EasyPocketDatabase.MIGRATION_6_7,
                 EasyPocketDatabase.MIGRATION_7_8,
+                EasyPocketDatabase.MIGRATION_8_9,
             )
             .allowMainThreadQueries()
             .build()
@@ -636,5 +694,11 @@ class DatabaseTest {
         db.execSQL("INSERT INTO categories (id, name, icon) VALUES ('ABC123', 'Abarrotes', 'X')")
         db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement) VALUES ('p1', 'Milk', 'lt')")
         db.execSQL("INSERT INTO product_prices (product_id, store_id, value) VALUES ('p1', 's1', 10.0)")
+    }
+
+    private fun createV8Schema(db: SupportSQLiteDatabase) {
+        createV7Schema(db)
+        db.execSQL("ALTER TABLE shopping_lists ADD COLUMN category_id TEXT")
+        db.execSQL("CREATE INDEX `index_shopping_lists_category_id` ON `shopping_lists` (`category_id`)")
     }
 }

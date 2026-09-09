@@ -14,6 +14,7 @@ data class BackupData(
     val listItems: List<BackupListItem>,
     val purchaseHistory: List<BackupPurchaseHistory> = emptyList(),
     val purchaseHistoryItems: List<BackupPurchaseHistoryItem> = emptyList(),
+    val purchaseHistoryCategoryTotals: List<BackupPurchaseHistoryCategoryTotal> = emptyList(),
     val lastCategories: List<BackupProductLastCategory> = emptyList(),
 )
 
@@ -94,4 +95,11 @@ data class BackupPurchaseHistoryItem(
     val totalPrice: Double,
     val categoryCode: String? = null,
     val itemUid: String? = null,
+)
+
+@Serializable
+data class BackupPurchaseHistoryCategoryTotal(
+    val historyId: String,
+    val categoryCode: String? = null,
+    val total: Double,
 )

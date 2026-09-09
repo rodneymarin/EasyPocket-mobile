@@ -67,7 +67,7 @@ object HistoryMath {
         today: LocalDate,
     ): Map<String?, Double> =
         records.filter { isInRange(it.record, rangeDays, today) }
-            .flatMap { it.items }
+            .flatMap { it.categoryTotals }
             .groupBy { it.categoryCode }
-            .mapValues { (_, items) -> items.sumOf { it.totalPrice } }
+            .mapValues { (_, totals) -> totals.sumOf { it.total } }
 }

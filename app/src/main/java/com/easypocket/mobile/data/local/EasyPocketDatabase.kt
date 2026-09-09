@@ -10,8 +10,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         StoreEntity::class, CategoryEntity::class, ProductEntity::class, ProductLastCategoryEntity::class,
         PriceEntity::class, ShoppingListEntity::class, ShoppingListItemEntity::class,
         PurchaseHistoryEntity::class, PurchaseHistoryItemEntity::class,
+        PurchaseHistoryCategoryTotalEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class EasyPocketDatabase : RoomDatabase() {
@@ -251,6 +252,53 @@ abstract class EasyPocketDatabase : RoomDatabase() {
             db.execSQL(
                 "CREATE INDEX IF NOT EXISTS `index_shopping_lists_category_id` " +
                     "ON `shopping_lists` (`category_id`)"
+            )
+        }
+    }
+
+    // - Creates `purchase_history_category_totals`: per-category expense
+    //   totals of each archived purchase, used by the category charts. The
+    //   archived items remain only as a reference record.
+    // - Backfills from the existing items (sum of item totals per category).
+    // - For legacy records archived with a manual total (all items priced at
+    //   0), the recorded total is attributed to the single category shared by
+    //   its items, or to "no category" when the items mix categories.
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `purchase_history_category_totals` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`history_id` TEXT NOT NULL, " +
+                    "`category_code` TEXT, " +
+                    "`total` REAL NOT NULL, " +
+                    "FOREIGN KEY(`history_id`) REFERENCES `purchase_history`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_purchase_history_category_totals_history_id` " +
+                    "ON `purchase_history_category_totals` (`history_id`)"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_history_category_totals_history_id_category_code` " +
+                    "ON `purchase_history_category_totals` (`history_id`, `category_code`)"
+            )
+            db.execSQL(
+                "INSERT INTO `purchase_history_category_totals` (`history_id`, `category_code`, `total`) " +
+                    "SELECT `history_id`, `category_code`, SUM(`total_price`) " +
+                    "FROM `purchase_history_items` " +
+                    "GROUP BY `history_id`, `category_code` " +
+                    "HAVING SUM(`total_price`) > 0"
+            )
+            db.execSQL(
+                "INSERT INTO `purchase_history_category_totals` (`history_id`, `category_code`, `total`) " +
+                    "SELECT h.`id`, " +
+                    "CASE WHEN COUNT(DISTINCT IFNULL(i.`category_code`, '~~none~~')) = 1 " +
+                    "THEN MIN(i.`category_code`) ELSE NULL END, " +
+                    "h.`total_amount` " +
+                    "FROM `purchase_history` h " +
+                    "JOIN `purchase_history_items` i ON i.`history_id` = h.`id` " +
+                    "GROUP BY h.`id` " +
+                    "HAVING SUM(i.`total_price`) = 0 AND h.`total_amount` > 0"
             )
         }
     }

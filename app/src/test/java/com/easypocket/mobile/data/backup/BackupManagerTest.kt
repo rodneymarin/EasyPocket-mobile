@@ -7,6 +7,7 @@ import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductEntity
 import com.easypocket.mobile.data.local.ProductLastCategoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryCategoryTotalEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListEntity
@@ -256,5 +257,68 @@ class BackupManagerTest {
         val items = db.purchaseHistoryDao().observeAll().first().first().items
         assertEquals("ZZZ999", items.first().categoryCode)
         assertTrue(db.categoryDao().getAll().first().isEmpty())
+    }
+
+    @Test
+    fun `export and import preserve history category totals`() = runTest {
+        db.purchaseHistoryDao().insertHistory(
+            PurchaseHistoryEntity("h1", "Compras", "🛒", 1_756_400_000_000, 50.0, 2)
+        )
+        db.purchaseHistoryDao().insertItems(
+            listOf(
+                PurchaseHistoryItemEntity(
+                    historyId = "h1", productName = "Milk", storeName = null,
+                    quantity = 1.0, unitPrice = 0.0, totalPrice = 0.0,
+                    categoryCode = "CAT1", itemUid = "uid-h1",
+                )
+            )
+        )
+        db.purchaseHistoryDao().insertCategoryTotals(
+            listOf(
+                PurchaseHistoryCategoryTotalEntity(historyId = "h1", categoryCode = "CAT1", total = 30.0),
+                PurchaseHistoryCategoryTotalEntity(historyId = "h1", categoryCode = null, total = 20.0),
+            )
+        )
+
+        val json = manager.exportToString()
+        assertTrue(json.contains("\"purchaseHistoryCategoryTotals\""))
+        db.clearAllTables()
+        manager.importData(manager.parse(json).getOrThrow())
+
+        val totals = db.purchaseHistoryDao().observeAll().first().first().categoryTotals
+            .associateBy { it.categoryCode }
+        assertEquals(30.0, totals["CAT1"]!!.total, 0.001)
+        assertEquals(20.0, totals[null]!!.total, 0.001)
+    }
+
+    @Test
+    fun `import legacy backup recomputes category totals from items`() = runTest {
+        val legacyJson = """
+            {"version":1,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
+             "shoppingLists":[],"listItems":[],
+             "purchaseHistory":[{"id":"h1","listTitle":"Compras","listIcon":"$","date":1,"totalAmount":50.0,"itemCount":2}],
+             "purchaseHistoryItems":[
+               {"historyId":"h1","productName":"Milk","quantity":1.0,"unitPrice":0.0,"totalPrice":0.0,"categoryCode":"CAT1"},
+               {"historyId":"h1","productName":"Bread","quantity":1.0,"unitPrice":0.0,"totalPrice":0.0,"categoryCode":"CAT1"}]}
+        """.trimIndent()
+
+        manager.importData(manager.parse(legacyJson).getOrThrow())
+
+        val totals = db.purchaseHistoryDao().observeAll().first().first().categoryTotals
+        assertEquals(1, totals.size)
+        assertEquals("CAT1", totals.first().categoryCode)
+        assertEquals(50.0, totals.first().total, 0.001)
+    }
+
+    @Test
+    fun `parse rejects category total referencing unknown history`() {
+        val badBackupJson = """
+            {"version":2,"exportedAt":"2026-01-01T00:00:00Z","stores":[],"products":[],"prices":[],
+             "shoppingLists":[],"listItems":[],
+             "purchaseHistory":[],
+             "purchaseHistoryCategoryTotals":[{"historyId":"nope","categoryCode":"CAT1","total":10.0}]}
+        """.trimIndent()
+
+        assertTrue(manager.parse(badBackupJson).isFailure)
     }
 }

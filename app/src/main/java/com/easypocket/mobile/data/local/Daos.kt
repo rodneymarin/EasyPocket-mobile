@@ -179,6 +179,9 @@ interface PurchaseHistoryDao {
     @Insert
     suspend fun insertItems(items: List<PurchaseHistoryItemEntity>)
 
+    @Insert
+    suspend fun insertCategoryTotals(totals: List<PurchaseHistoryCategoryTotalEntity>)
+
     @Query("DELETE FROM purchase_history WHERE id = :id")
     suspend fun deleteById(id: String)
 }

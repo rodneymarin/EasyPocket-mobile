@@ -5,6 +5,7 @@ import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.ProductDao
 import com.easypocket.mobile.data.local.PurchaseHistoryDao
+import com.easypocket.mobile.data.local.PurchaseHistoryCategoryTotalEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
@@ -64,6 +65,7 @@ class PurchaseHistoryRepository @Inject constructor(
             }
             val itemsTotal = historyItems.sumOf { it.totalPrice }
             val totalAmount = if (itemsTotal == 0.0 && manualTotal != null && manualTotal > 0.0) manualTotal else itemsTotal
+            val categoryTotals = categoryTotalRows(historyId, historyItems, itemsTotal, totalAmount)
             val history = PurchaseHistoryEntity(
                 id = historyId,
                 listTitle = relation.list.title,
@@ -74,7 +76,36 @@ class PurchaseHistoryRepository @Inject constructor(
             )
             historyDao.insertHistory(history)
             historyDao.insertItems(historyItems)
+            if (categoryTotals.isNotEmpty()) historyDao.insertCategoryTotals(categoryTotals)
             listDao.removeCompleted(listId)
         }
+    }
+
+    // Per-category totals that feed the category charts. With item prices the
+    // totals are the sum of the item totals per category. When the items have
+    // no prices and the purchase was archived with a manual total, the whole
+    // amount goes to the single category shared by the items (a list with a
+    // fixed category), or to "no category" when they mix categories.
+    private fun categoryTotalRows(
+        historyId: String,
+        items: List<PurchaseHistoryItemEntity>,
+        itemsTotal: Double,
+        recordedTotal: Double,
+    ): List<PurchaseHistoryCategoryTotalEntity> {
+        if (recordedTotal <= 0.0) return emptyList()
+        if (itemsTotal > 0.0) {
+            return items.groupBy { it.categoryCode }.mapNotNull { (code, group) ->
+                val total = group.sumOf { it.totalPrice }
+                if (total > 0.0) {
+                    PurchaseHistoryCategoryTotalEntity(historyId = historyId, categoryCode = code, total = total)
+                } else {
+                    null
+                }
+            }
+        }
+        val sharedCategory = items.map { it.categoryCode }.distinct().singleOrNull()
+        return listOf(
+            PurchaseHistoryCategoryTotalEntity(historyId = historyId, categoryCode = sharedCategory, total = recordedTotal)
+        )
     }
 }

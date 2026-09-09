@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryCategoryTotalEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListEntity
@@ -109,6 +110,73 @@ class PurchaseHistoryRepositoryTest {
         val items = repo.observeAll().first().first().items.associateBy { it.productName }
         assertEquals("ABC123", items.getValue("Milk").categoryCode)
         assertEquals(null, items.getValue("Bread").categoryCode)
+    }
+
+    @Test
+    fun `archiveCompleted stores per category totals of priced items`() = runTest {
+        db.storeDao().insert(StoreEntity("s1", "Store 1", 0))
+        db.productDao().insert(ProductEntity("p1", "Milk", "u"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u"))
+        db.priceDao().insertAll(listOf(PriceEntity("p1", "s1", 10.0), PriceEntity("p2", "s1", 5.0)))
+        db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = "s1", categoryId = "CAT1", quantity = 2.0, done = true))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p2", storeId = "s1", categoryId = "CAT2", quantity = 1.0, done = true))
+
+        repo.archiveCompleted("l1")
+
+        val record = repo.observeAll().first().first()
+        val totals = record.categoryTotals.associateBy { it.categoryCode }
+        assertEquals(2, record.categoryTotals.size)
+        assertEquals(20.0, totals["CAT1"]!!.total, 0.001)
+        assertEquals(5.0, totals["CAT2"]!!.total, 0.001)
+    }
+
+    @Test
+    fun `archiveCompleted attributes a manual total to the shared category of the items`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "u"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u"))
+        db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒", "CAT1"))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "CAT1", quantity = 2.0, done = true))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p2", storeId = null, categoryId = "CAT1", quantity = 1.0, done = true))
+
+        repo.archiveCompleted("l1", manualTotal = 50.0)
+
+        val record = repo.observeAll().first().first()
+        assertEquals(50.0, record.record.totalAmount, 0.001)
+        assertEquals(1, record.categoryTotals.size)
+        assertEquals("CAT1", record.categoryTotals.first().categoryCode)
+        assertEquals(50.0, record.categoryTotals.first().total, 0.001)
+        assertTrue(record.items.all { it.totalPrice == 0.0 })
+    }
+
+    @Test
+    fun `archiveCompleted sends a manual total with mixed categories to no category`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "u"))
+        db.productDao().insert(ProductEntity("p2", "Bread", "u"))
+        db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "CAT1", quantity = 1.0, done = true))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p2", storeId = null, categoryId = null, quantity = 1.0, done = true))
+
+        repo.archiveCompleted("l1", manualTotal = 30.0)
+
+        val record = repo.observeAll().first().first()
+        assertEquals(30.0, record.record.totalAmount, 0.001)
+        assertEquals(1, record.categoryTotals.size)
+        assertEquals(null, record.categoryTotals.first().categoryCode)
+        assertEquals(30.0, record.categoryTotals.first().total, 0.001)
+    }
+
+    @Test
+    fun `archiveCompleted without prices or manual total stores no category totals`() = runTest {
+        db.productDao().insert(ProductEntity("p1", "Milk", "u"))
+        db.listDao().insert(ShoppingListEntity("l1", "Weekly", "🛒"))
+        db.listDao().insertItem(ShoppingListItemEntity(shoppingListId = "l1", productId = "p1", storeId = null, categoryId = "CAT1", quantity = 1.0, done = true))
+
+        repo.archiveCompleted("l1")
+
+        val record = repo.observeAll().first().first()
+        assertEquals(0.0, record.record.totalAmount, 0.001)
+        assertTrue(record.categoryTotals.isEmpty())
     }
 
     @Test

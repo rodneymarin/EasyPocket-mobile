@@ -13,4 +13,6 @@ data class PurchaseHistoryWithItems(
     @Embedded val record: PurchaseHistoryEntity,
     @Relation(parentColumn = "id", entityColumn = "history_id")
     val items: List<PurchaseHistoryItemEntity>,
+    @Relation(parentColumn = "id", entityColumn = "history_id")
+    val categoryTotals: List<PurchaseHistoryCategoryTotalEntity> = emptyList(),
 )

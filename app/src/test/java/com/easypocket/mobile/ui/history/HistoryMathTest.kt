@@ -1,5 +1,6 @@
 package com.easypocket.mobile.ui.history
 
+import com.easypocket.mobile.data.local.PurchaseHistoryCategoryTotalEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryWithItems
@@ -103,8 +104,15 @@ class HistoryMathTest {
         assertEquals(false, HistoryMath.isInRange(record, 7, today))
     }
 
+    private fun categoryTotal(historyId: String, categoryCode: String?, total: Double) =
+        PurchaseHistoryCategoryTotalEntity(
+            historyId = historyId,
+            categoryCode = categoryCode,
+            total = total,
+        )
+
     @Test
-    fun `categoryTotals groups item totals by category and falls back to null`() {
+    fun `categoryTotals groups stored category totals and falls back to null`() {
         val records = listOf(
             PurchaseHistoryWithItems(
                 entity("2026-08-27", 30.0),
@@ -113,10 +121,15 @@ class HistoryMathTest {
                     item("h1", "CAT1", 5.0),
                     item("h1", null, 15.0),
                 ),
+                listOf(
+                    categoryTotal("h1", "CAT1", 15.0),
+                    categoryTotal("h1", null, 15.0),
+                ),
             ),
             PurchaseHistoryWithItems(
                 entity("2026-08-26", 20.0),
                 listOf(item("h2", "CAT2", 20.0)),
+                listOf(categoryTotal("h2", "CAT2", 20.0)),
             ),
         )
 
@@ -126,6 +139,24 @@ class HistoryMathTest {
         assertEquals(15.0, totals["CAT1"]!!, 0.001)
         assertEquals(20.0, totals["CAT2"]!!, 0.001)
         assertEquals(15.0, totals[null]!!, 0.001)
+    }
+
+    @Test
+    fun `categoryTotals includes the manual total of records without item prices`() {
+        val records = listOf(
+            PurchaseHistoryWithItems(
+                entity("2026-08-27", 50.0),
+                listOf(
+                    item("h1", "CAT1", 0.0),
+                    item("h1", "CAT1", 0.0),
+                ),
+                listOf(categoryTotal("h1", "CAT1", 50.0)),
+            ),
+        )
+
+        val totals = HistoryMath.categoryTotals(records, 7, today)
+
+        assertEquals(50.0, totals["CAT1"]!!, 0.001)
     }
 
     @Test
@@ -148,10 +179,12 @@ class HistoryMathTest {
             PurchaseHistoryWithItems(
                 entity("2026-08-27", 30.0),
                 listOf(item("h1", "CAT1", 30.0)),
+                listOf(categoryTotal("h1", "CAT1", 30.0)),
             ),
             PurchaseHistoryWithItems(
                 entity("2026-08-01", 50.0),
                 listOf(item("h2", "CAT2", 50.0)),
+                listOf(categoryTotal("h2", "CAT2", 50.0)),
             ),
         )
 

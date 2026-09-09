@@ -110,3 +110,25 @@ data class PurchaseHistoryItemEntity(
     @ColumnInfo(name = "category_code") val categoryCode: String? = null,
     @ColumnInfo(name = "item_uid") val itemUid: String,
 )
+
+// Per-category expense totals of an archived purchase. They drive the
+// category charts; the items are kept only as a reference record. When a
+// purchase is archived with a manual total (no per-item prices), the whole
+// amount lands here for the list's category instead of on the items.
+@Entity(
+    tableName = "purchase_history_category_totals",
+    foreignKeys = [
+        ForeignKey(entity = PurchaseHistoryEntity::class, parentColumns = ["id"],
+            childColumns = ["history_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [
+        Index("history_id"),
+        Index(value = ["history_id", "category_code"], unique = true),
+    ],
+)
+data class PurchaseHistoryCategoryTotalEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "history_id") val historyId: String,
+    @ColumnInfo(name = "category_code") val categoryCode: String? = null,
+    val total: Double,
+)

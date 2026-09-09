@@ -8,6 +8,7 @@ import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductEntity
 import com.easypocket.mobile.data.local.ProductLastCategoryEntity
+import com.easypocket.mobile.data.local.PurchaseHistoryCategoryTotalEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryEntity
 import com.easypocket.mobile.data.local.PurchaseHistoryItemEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
@@ -63,6 +64,11 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                         h.record.id, i.productName, i.storeName,
                         i.quantity, i.unitPrice, i.totalPrice, i.categoryCode, i.itemUid,
                     )
+                }
+            },
+            purchaseHistoryCategoryTotals = history.flatMap { h ->
+                h.categoryTotals.map { t ->
+                    BackupPurchaseHistoryCategoryTotal(h.record.id, t.categoryCode, t.total)
                 }
             },
         )
@@ -146,8 +152,43 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
                     )
                 })
             }
+            // Legacy backups (version <= 2 without the new field) carry no
+            // category totals; recompute them from the restored items.
+            val categoryTotals = if (backup.purchaseHistoryCategoryTotals.isNotEmpty()) {
+                backup.purchaseHistoryCategoryTotals.map { t ->
+                    PurchaseHistoryCategoryTotalEntity(historyId = t.historyId, categoryCode = t.categoryCode, total = t.total)
+                }
+            } else {
+                recomputedCategoryTotals(backup.purchaseHistory, backup.purchaseHistoryItems).map { t ->
+                    PurchaseHistoryCategoryTotalEntity(historyId = t.historyId, categoryCode = t.categoryCode, total = t.total)
+                }
+            }
+            if (categoryTotals.isNotEmpty()) db.purchaseHistoryDao().insertCategoryTotals(categoryTotals)
         }
     }
+
+    // Same rules as the archive flow: sums of item totals per category, or
+    // the recorded total attributed to the items' shared category when the
+    // items have no prices (mixed categories go to "no category").
+    private fun recomputedCategoryTotals(
+        histories: List<BackupPurchaseHistory>,
+        items: List<BackupPurchaseHistoryItem>,
+    ): List<BackupPurchaseHistoryCategoryTotal> =
+        items.groupBy { it.historyId }.flatMap { (historyId, historyItems) ->
+            val itemsTotal = historyItems.sumOf { it.totalPrice }
+            val recordedTotal = histories.firstOrNull { it.id == historyId }?.totalAmount ?: 0.0
+            if (itemsTotal > 0.0) {
+                historyItems.groupBy { it.categoryCode }.mapNotNull { (code, group) ->
+                    val total = group.sumOf { it.totalPrice }
+                    if (total > 0.0) BackupPurchaseHistoryCategoryTotal(historyId, code, total) else null
+                }
+            } else if (recordedTotal > 0.0) {
+                val sharedCategory = historyItems.map { it.categoryCode }.distinct().singleOrNull()
+                listOf(BackupPurchaseHistoryCategoryTotal(historyId, sharedCategory, recordedTotal))
+            } else {
+                emptyList()
+            }
+        }
 
     private fun validate(backup: BackupData) {
         require(backup.version in LEGACY_VERSION..SUPPORTED_VERSION) {
@@ -198,5 +239,8 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
         }
         val itemUids = backup.purchaseHistoryItems.mapNotNull { it.itemUid }
         require(itemUids.size == itemUids.toSet().size) { "Duplicate history item uids in backup" }
+        backup.purchaseHistoryCategoryTotals.forEach { total ->
+            require(total.historyId in historyIds) { "History category total references unknown history: ${total.historyId}" }
+        }
     }
 }
