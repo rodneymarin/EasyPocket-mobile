@@ -506,4 +506,135 @@ class DatabaseTest {
         }
         assertTrue(db.purchaseHistoryDao().observeAll().first().isEmpty())
     }
+
+    // End-to-end guard: builds a database with the exact v7 schema that real
+    // devices have (the result of running migrations 1..7), then opens it
+    // through Room with the full migration chain. This fails if a migration
+    // is missing from the builder or the migrated schema does not match the
+    // current entities — the exact failure mode that once wiped user data.
+    @Test
+    fun `opening a real v7 database through the full migration chain keeps data`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "easypocket-v7-upgrade-test.db"
+        context.deleteDatabase(name)
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(7) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = createV7Schema(db)
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO shopping_lists (id, title, icon) VALUES ('l1', 'Mi Lista', '🛒')"
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO shopping_list_items (id, shopping_list_id, product_id, store_id, category_id, quantity, done, pinned) " +
+                "VALUES (1, 'l1', 'p1', 's1', 'ABC123', 2.0, 0, 0)"
+        )
+        helper.close()
+
+        val upgraded = Room.databaseBuilder(context, EasyPocketDatabase::class.java, name)
+            .addMigrations(
+                EasyPocketDatabase.MIGRATION_1_2,
+                EasyPocketDatabase.MIGRATION_2_3,
+                EasyPocketDatabase.MIGRATION_3_4,
+                EasyPocketDatabase.MIGRATION_4_5,
+                EasyPocketDatabase.MIGRATION_5_6,
+                EasyPocketDatabase.MIGRATION_6_7,
+                EasyPocketDatabase.MIGRATION_7_8,
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        try {
+            val list = upgraded.listDao().getById("l1")!!
+            assertEquals("Mi Lista", list.list.title)
+            assertNull(list.list.categoryId)
+            assertEquals(1, list.items.size)
+            assertEquals("p1", list.items[0].productId)
+            assertEquals("ABC123", list.items[0].categoryId)
+
+            // The new column is usable through Room
+            upgraded.listDao().updateCategory("l1", "ABC123")
+            val categorized = upgraded.listDao().getById("l1")!!
+            assertEquals("ABC123", categorized.list.categoryId)
+        } finally {
+            upgraded.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    private fun createV7Schema(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE `stores` (`id` TEXT NOT NULL, `description` TEXT NOT NULL, `color` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+        db.execSQL("CREATE TABLE `categories` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `icon` TEXT NOT NULL DEFAULT '$', PRIMARY KEY(`id`))")
+        db.execSQL("CREATE INDEX `index_categories_name` ON `categories` (`name`)")
+        db.execSQL("CREATE TABLE `products` (`id` TEXT NOT NULL, `product_name` TEXT NOT NULL, `unit_of_measurement` TEXT NOT NULL, PRIMARY KEY(`id`))")
+        db.execSQL("CREATE INDEX `index_products_product_name` ON `products` (`product_name`)")
+        db.execSQL(
+            "CREATE TABLE `product_last_categories` (" +
+                "`product_id` TEXT NOT NULL, " +
+                "`category_id` TEXT NOT NULL, " +
+                "PRIMARY KEY(`product_id`))"
+        )
+        db.execSQL(
+            "CREATE TABLE `product_prices` (" +
+                "`product_id` TEXT NOT NULL, " +
+                "`store_id` TEXT NOT NULL, " +
+                "`value` REAL NOT NULL, " +
+                "PRIMARY KEY(`product_id`, `store_id`), " +
+                "FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                "FOREIGN KEY(`store_id`) REFERENCES `stores`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE TABLE `shopping_lists` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `icon` TEXT NOT NULL DEFAULT '$', PRIMARY KEY(`id`))")
+        db.execSQL(
+            "CREATE TABLE `shopping_list_items` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`shopping_list_id` TEXT NOT NULL, " +
+                "`product_id` TEXT NOT NULL, " +
+                "`store_id` TEXT, " +
+                "`category_id` TEXT, " +
+                "`quantity` REAL NOT NULL, " +
+                "`done` INTEGER NOT NULL, " +
+                "`pinned` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`shopping_list_id`) REFERENCES `shopping_lists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                "FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                "FOREIGN KEY(`store_id`) REFERENCES `stores`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL)"
+        )
+        db.execSQL("CREATE INDEX `index_shopping_list_items_shopping_list_id` ON `shopping_list_items` (`shopping_list_id`)")
+        db.execSQL("CREATE INDEX `index_shopping_list_items_product_id` ON `shopping_list_items` (`product_id`)")
+        db.execSQL("CREATE INDEX `index_shopping_list_items_store_id` ON `shopping_list_items` (`store_id`)")
+        db.execSQL("CREATE INDEX `index_shopping_list_items_category_id` ON `shopping_list_items` (`category_id`)")
+        db.execSQL(
+            "CREATE TABLE `purchase_history` (" +
+                "`id` TEXT NOT NULL, " +
+                "`list_title` TEXT NOT NULL, " +
+                "`list_icon` TEXT NOT NULL, " +
+                "`date` INTEGER NOT NULL, " +
+                "`total_amount` REAL NOT NULL, " +
+                "`item_count` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))"
+        )
+        db.execSQL(
+            "CREATE TABLE `purchase_history_items` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`history_id` TEXT NOT NULL, " +
+                "`product_name` TEXT NOT NULL, " +
+                "`store_name` TEXT, " +
+                "`quantity` REAL NOT NULL, " +
+                "`unit_price` REAL NOT NULL, " +
+                "`total_price` REAL NOT NULL, " +
+                "`category_code` TEXT, " +
+                "`item_uid` TEXT NOT NULL, " +
+                "FOREIGN KEY(`history_id`) REFERENCES `purchase_history`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX `index_purchase_history_items_history_id` ON `purchase_history_items` (`history_id`)")
+        db.execSQL("CREATE UNIQUE INDEX `index_purchase_history_items_item_uid` ON `purchase_history_items` (`item_uid`)")
+
+        db.execSQL("INSERT INTO stores (id, description, color) VALUES ('s1', 'Store 1', 0)")
+        db.execSQL("INSERT INTO categories (id, name, icon) VALUES ('ABC123', 'Abarrotes', 'X')")
+        db.execSQL("INSERT INTO products (id, product_name, unit_of_measurement) VALUES ('p1', 'Milk', 'lt')")
+        db.execSQL("INSERT INTO product_prices (product_id, store_id, value) VALUES ('p1', 's1', 10.0)")
+    }
 }

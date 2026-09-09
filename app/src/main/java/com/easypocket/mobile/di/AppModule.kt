@@ -33,8 +33,12 @@ object AppModule {
                 EasyPocketDatabase.MIGRATION_4_5,
                 EasyPocketDatabase.MIGRATION_5_6,
                 EasyPocketDatabase.MIGRATION_6_7,
+                EasyPocketDatabase.MIGRATION_7_8,
             )
-            .fallbackToDestructiveMigration()
+            // Destructive fallback only on downgrade. On an upgrade with a
+            // missing/failed migration Room must fail loudly instead of
+            // silently wiping the user's data.
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides
