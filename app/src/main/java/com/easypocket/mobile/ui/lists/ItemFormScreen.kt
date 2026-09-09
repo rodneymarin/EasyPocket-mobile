@@ -37,9 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,6 +54,7 @@ import com.easypocket.mobile.ui.components.AppBottomSheet
 import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.ButtonVariant
+import com.easypocket.mobile.ui.components.CategoryChipSelector
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.IconButtonCircle
@@ -63,7 +67,6 @@ import com.easypocket.mobile.ui.products.ProductPickerSheet
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
-import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.Store
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -188,12 +191,26 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             )
 
             Spacer(Modifier.height(16.dp))
-            FieldLabel(t("products.categoryLabel", language))
+            Text(
+                text = buildAnnotatedString {
+                    append(t("products.categoryLabel", language))
+                    if (uiState.listCategoryId != null) {
+                        append(" ")
+                        withStyle(SpanStyle(color = appColors.textSecondary, fontWeight = FontWeight.Normal)) {
+                            append(t("listItem.categoryLocked", language))
+                        }
+                    }
+                },
+                color = appColors.text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(8.dp))
-            CategoryTagSelector(
+            CategoryChipSelector(
                 categories = uiState.categories,
                 selectedCategoryId = uiState.categoryId,
                 onSelect = { id -> vm.setCategory(id) },
+                enabled = uiState.listCategoryId == null,
             )
 
             Spacer(Modifier.height(20.dp))
@@ -367,44 +384,6 @@ private fun StoreTagSelector(
                 Text(
                     text = store.description,
                     color = StoreColors.textColor(store.color, isDark),
-                    fontSize = 13.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CategoryTagSelector(
-    categories: List<Category>,
-    selectedCategoryId: String?,
-    onSelect: (String?) -> Unit,
-) {
-    val appColors = LocalAppColors.current
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        categories.forEach { category ->
-            val selected = category.id == selectedCategoryId
-            val shape = RoundedCornerShape(999.dp)
-            Box(
-                modifier = Modifier
-                    .border(2.dp, if (selected) appColors.primary else Color.Transparent, shape)
-                    .padding(2.dp)
-                    .clip(shape)
-                    .background(
-                        if (selected) appColors.primary.copy(alpha = 0.15f) else appColors.inputBackground
-                    )
-                    .clickable { onSelect(if (selected) null else category.id) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp),
-            ) {
-                Text(
-                    text = "${category.icon} ${category.name}",
-                    color = if (selected) appColors.primary else appColors.text,
                     fontSize = 13.sp,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 )

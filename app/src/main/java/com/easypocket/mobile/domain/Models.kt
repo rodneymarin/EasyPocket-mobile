@@ -22,6 +22,7 @@ data class ShoppingList(
     val id: String,
     val title: String,
     val icon: String = "$",
+    val categoryId: String? = null,
     val items: List<ShoppingListItem> = emptyList(),
 )
 data class ItemSection(val category: Category?, val items: List<ShoppingListItem>)

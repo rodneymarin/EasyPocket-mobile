@@ -49,7 +49,7 @@ class ItemFormViewModelTest {
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
-        listsRepository = ShoppingListRepository(db.listDao())
+        listsRepository = ShoppingListRepository(db, db.listDao())
         settingsRepository = SettingsRepository(context)
         settingsRepository.setLastStore(null)
         Seeder(db).seedIfEmpty()
@@ -374,5 +374,29 @@ class ItemFormViewModelTest {
         val reloaded = listsRepository.getById("0oasidu0as9dua0sd")!!.items.last { it.id == item.id }
         assertEquals(cat2.id, reloaded.categoryId)
         assertEquals(cat2.id, lastCategories.getFor("prod-001"))
+    }
+
+    @Test
+    fun `category-locked list forces the category and never touches the product memory`() = runTest {
+        repos()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat = categoryRepository.create("Verduras")
+        val lockedList = listsRepository.create("Lista Bloqueada", categoryId = cat.id)
+        val lastCategories = ProductLastCategoryRepository(db.productLastCategoryDao())
+        lastCategories.set("prod-001", "ABC123")
+
+        val vm = vm()
+        vm.load(lockedList.id, -1)
+        assertEquals(cat.id, vm.uiState.value.listCategoryId)
+        vm.selectProduct("prod-001")
+        assertEquals(cat.id, vm.uiState.value.categoryId)
+        vm.setCategory(null)
+        assertEquals(cat.id, vm.uiState.value.categoryId)
+        vm.setQuantity("1")
+        vm.save {}
+
+        val item = listsRepository.getById(lockedList.id)!!.items.last()
+        assertEquals(cat.id, item.categoryId)
+        assertEquals("ABC123", lastCategories.getFor("prod-001"))
     }
 }

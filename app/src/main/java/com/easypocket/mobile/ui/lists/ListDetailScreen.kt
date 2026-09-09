@@ -102,6 +102,7 @@ import com.easypocket.mobile.ui.components.HeaderIconButton
 import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.CategoryChipSelector
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.inputContainerColor
 import com.easypocket.mobile.ui.components.LocalToastState
@@ -132,6 +133,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var showRename by rememberSaveable { mutableStateOf(false) }
     var renameInput by remember { mutableStateOf("") }
     var renameIcon by remember { mutableStateOf("") }
+    var renameCategoryId by remember { mutableStateOf<String?>(null) }
     var showRemoveCompleted by rememberSaveable { mutableStateOf(false) }
     var showArchive by rememberSaveable { mutableStateOf(false) }
     var manualTotalText by rememberSaveable { mutableStateOf("") }
@@ -176,6 +178,7 @@ fun ListDetailScreen(navController: NavController, listId: String) {
                         onClick = {
                             renameInput = uiState.list?.title ?: ""
                             renameIcon = uiState.list?.icon ?: ""
+                            renameCategoryId = uiState.list?.categoryId
                             showRename = true
                         },
                     )
@@ -290,16 +293,20 @@ fun ListDetailScreen(navController: NavController, listId: String) {
         visible = showRename,
         initialTitle = uiState.list?.title ?: "",
         initialIcon = uiState.list?.icon ?: "",
+        initialCategoryId = uiState.list?.categoryId,
+        categories = uiState.categoriesById.values.toList(),
         input = renameInput,
         onInputChange = { renameInput = it },
         icon = renameIcon,
         onIconChange = { renameIcon = it },
+        categoryId = renameCategoryId,
+        onCategoryChange = { renameCategoryId = it },
         language = language,
         onSave = {
             scope.launch {
                 val title = renameInput.trim()
                 if (title.isNotEmpty()) {
-                    vm.renameList(title, renameIcon.ifBlank { ListIcon.DEFAULT })
+                    vm.renameList(title, renameIcon.ifBlank { ListIcon.DEFAULT }, renameCategoryId)
                     showRename = false
                     toast.show(t("toast.listRenamed", language), ToastType.SUCCESS)
                 }
@@ -785,9 +792,17 @@ private fun ItemsList(
         ),
     ) {
         val hasDone = uiState.doneItems.isNotEmpty()
+        val lockedCategory = list.categoryId?.let { id -> uiState.categoriesById[id] }
         when {
             list.items.isEmpty() -> item {
-                EmptyMessage(t("listDetail.empty", language))
+                lockedCategory?.let { category ->
+                    CategorySectionHeader(
+                        icon = category.icon,
+                        name = category.name,
+                        lockedSuffix = t("listDetail.categoryForWholeList", language),
+                    )
+                }
+                EmptyMessage(t("listDetail.empty", language), topPadding = if (lockedCategory != null) 16.dp else 40.dp)
             }
             uiState.pendingItems.isEmpty() && uiState.doneItems.isEmpty() -> item {
                 EmptyMessage(t("listDetail.noFilterMatch", language))
@@ -797,7 +812,13 @@ private fun ItemsList(
                     section.category?.let { category ->
                         item(key = "category_${category.id}") {
                             Box(Modifier.animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec)) {
-                                CategorySectionHeader(icon = category.icon, name = category.name)
+                                CategorySectionHeader(
+                                    icon = category.icon,
+                                    name = category.name,
+                                    lockedSuffix = if (category.id == list.categoryId) {
+                                        t("listDetail.categoryForWholeList", language)
+                                    } else null,
+                                )
                             }
                         }
                     } ?: item(key = "category_none") {
@@ -902,7 +923,7 @@ private fun FlyingItemContainer(
 }
 
 @Composable
-private fun CategorySectionHeader(icon: String?, name: String) {
+private fun CategorySectionHeader(icon: String?, name: String, lockedSuffix: String? = null) {
     val appColors = LocalAppColors.current
     Column(Modifier.fillMaxWidth()) {
         Spacer(Modifier.height(8.dp))
@@ -921,6 +942,15 @@ private fun CategorySectionHeader(icon: String?, name: String) {
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
             )
+            if (lockedSuffix != null) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = lockedSuffix,
+                    color = appColors.placeholderText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                )
+            }
         }
         Spacer(Modifier.height(4.dp))
     }
@@ -946,9 +976,9 @@ private fun DoneSectionHeader(language: Language) {
 }
 
 @Composable
-private fun EmptyMessage(text: String) {
+private fun EmptyMessage(text: String, topPadding: Dp = 40.dp) {
     val appColors = LocalAppColors.current
-    Box(Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().padding(top = topPadding), contentAlignment = Alignment.Center) {
         Text(text, color = appColors.textSecondary, fontSize = 16.sp, textAlign = TextAlign.Center)
     }
 }
@@ -1099,24 +1129,30 @@ private fun RenameSheet(
     visible: Boolean,
     initialTitle: String,
     initialIcon: String,
+    initialCategoryId: String?,
+    categories: List<Category>,
     input: String,
     onInputChange: (String) -> Unit,
     icon: String,
     onIconChange: (String) -> Unit,
+    categoryId: String?,
+    onCategoryChange: (String?) -> Unit,
     language: Language,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    LaunchedEffect(visible, initialTitle, initialIcon) {
+    val appColors = LocalAppColors.current
+    LaunchedEffect(visible, initialTitle, initialIcon, initialCategoryId) {
         if (visible) {
             onInputChange(initialTitle)
             onIconChange(initialIcon)
+            onCategoryChange(initialCategoryId)
         }
     }
     AppBottomSheet(
         visible = visible,
         onDismiss = onDismiss,
-        heightFraction = 0.75f,
+        heightFraction = 0.85f,
         title = t("listForm.editTitle", language),
     ) {
         DetailTitleInput(
@@ -1131,6 +1167,21 @@ private fun RenameSheet(
             onValueChange = onIconChange,
             placeholder = t("listForm.icon", language),
         )
+        if (categories.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = t("products.categoryLabel", language),
+                color = appColors.text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(8.dp))
+            CategoryChipSelector(
+                categories = categories,
+                selectedCategoryId = categoryId,
+                onSelect = onCategoryChange,
+            )
+        }
         Spacer(Modifier.height(16.dp))
         AppButton(
             text = t("common.save", language),

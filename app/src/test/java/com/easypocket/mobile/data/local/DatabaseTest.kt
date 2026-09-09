@@ -436,6 +436,54 @@ class DatabaseTest {
     }
 
     @Test
+    fun `migration 7 to 8 adds nullable category to shopping lists`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(7) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE shopping_lists (id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, icon TEXT NOT NULL)")
+                        db.execSQL("INSERT INTO shopping_lists (id, title, icon) VALUES ('l1', 'Lista', '$')")
+                        db.execSQL("INSERT INTO shopping_lists (id, title, icon) VALUES ('l2', 'Otra', '$')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        EasyPocketDatabase.MIGRATION_7_8.migrate(db)
+
+        // existing lists keep their data and start without a category
+        db.query("SELECT id, title, category_id FROM shopping_lists ORDER BY id").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("l1", cursor.getString(0))
+            assertEquals("Lista", cursor.getString(1))
+            assertNull(cursor.getString(2))
+            assertTrue(cursor.moveToNext())
+            assertEquals("l2", cursor.getString(0))
+            assertNull(cursor.getString(2))
+            assertFalse(cursor.moveToNext())
+        }
+
+        // the new column is usable
+        db.execSQL("UPDATE shopping_lists SET category_id = 'ABC123' WHERE id = 'l2'")
+        db.query("SELECT category_id FROM shopping_lists WHERE id = 'l2'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("ABC123", cursor.getString(0))
+        }
+
+        db.query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'index_shopping_lists_category_id'"
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+        }
+        helper.close()
+    }
+
+    @Test
     fun `delete history record cascades items`() = runTest {
         db.purchaseHistoryDao().insertHistory(
             PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)

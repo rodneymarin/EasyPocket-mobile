@@ -46,7 +46,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             products = products.map { BackupProduct(it.id, it.productName, it.unitOfMeasurement) },
             lastCategories = lastCategories.map { BackupProductLastCategory(it.productId, it.categoryId) },
             prices = prices.map { BackupPrice(it.productId, it.storeId, it.value) },
-            shoppingLists = lists.map { BackupList(it.list.id, it.list.title, it.list.icon) },
+            shoppingLists = lists.map { BackupList(it.list.id, it.list.title, it.list.icon, it.list.categoryId) },
             listItems = lists.flatMap { it.items.map { i ->
                 BackupListItem(
                     i.id, i.shoppingListId, i.productId, i.storeId,
@@ -112,7 +112,7 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             if (backup.prices.isNotEmpty()) {
                 db.priceDao().insertAll(backup.prices.map { PriceEntity(it.productId, it.storeId, it.value) })
             }
-            backup.shoppingLists.forEach { db.listDao().insert(ShoppingListEntity(it.id, it.title, it.icon)) }
+            backup.shoppingLists.forEach { db.listDao().insert(ShoppingListEntity(it.id, it.title, it.icon, it.categoryId)) }
             backup.listItems.forEach { item ->
                 db.listDao().insertItem(
                     ShoppingListItemEntity(
@@ -184,6 +184,11 @@ class BackupManager @Inject constructor(private val db: EasyPocketDatabase) {
             require(item.storeId == null || item.storeId in storeIds) { "List item references unknown store: ${item.storeId}" }
             require(item.categoryId == null || item.categoryId in categoryIds) {
                 "List item references unknown category: ${item.categoryId}"
+            }
+        }
+        backup.shoppingLists.forEach {
+            require(it.categoryId == null || it.categoryId in categoryIds) {
+                "List references unknown category: ${it.categoryId}"
             }
         }
         val historyIds = backup.purchaseHistory.map { it.id }

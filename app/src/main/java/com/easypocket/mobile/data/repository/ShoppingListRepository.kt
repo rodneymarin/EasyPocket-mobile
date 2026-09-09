@@ -1,5 +1,7 @@
 package com.easypocket.mobile.data.repository
 
+import androidx.room.withTransaction
+import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ShoppingListDao
 import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.data.local.ShoppingListItemEntity
@@ -14,13 +16,17 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 
 @Singleton
-class ShoppingListRepository @Inject constructor(private val listDao: ShoppingListDao) {
+class ShoppingListRepository @Inject constructor(
+    private val db: EasyPocketDatabase,
+    private val listDao: ShoppingListDao,
+) {
 
     private fun withItems(relation: ShoppingListWithItems) =
         ShoppingList(
             relation.list.id,
             relation.list.title,
             relation.list.icon,
+            relation.list.categoryId,
             relation.items.map {
                 ShoppingListItem(
                     it.id,
@@ -38,9 +44,9 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
 
     suspend fun getById(id: String): ShoppingList? = listDao.getById(id)?.let(::withItems)
 
-    suspend fun create(title: String, icon: String = ListIcon.DEFAULT): ShoppingList {
-        val list = ShoppingList(UUID.randomUUID().toString(), title, icon.ifBlank { ListIcon.DEFAULT })
-        listDao.insert(ShoppingListEntity(list.id, list.title, list.icon))
+    suspend fun create(title: String, icon: String = ListIcon.DEFAULT, categoryId: String? = null): ShoppingList {
+        val list = ShoppingList(UUID.randomUUID().toString(), title, icon.ifBlank { ListIcon.DEFAULT }, categoryId)
+        listDao.insert(ShoppingListEntity(list.id, list.title, list.icon, list.categoryId))
         return list
     }
 
@@ -48,6 +54,15 @@ class ShoppingListRepository @Inject constructor(private val listDao: ShoppingLi
 
     suspend fun rename(id: String, title: String, icon: String) =
         listDao.updateTitleAndIcon(id, title, icon)
+
+    // Changing the list category also re-categorizes every item in the list.
+    // It never touches the per-product remembered categories.
+    suspend fun setCategory(id: String, categoryId: String?) {
+        db.withTransaction {
+            listDao.updateCategory(id, categoryId)
+            listDao.setItemsCategory(id, categoryId)
+        }
+    }
 
     suspend fun addItem(
         listId: String,

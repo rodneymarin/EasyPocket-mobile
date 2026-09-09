@@ -51,6 +51,7 @@ import com.easypocket.mobile.ui.components.AppButton
 import com.easypocket.mobile.ui.components.AppFab
 import com.easypocket.mobile.ui.components.AppHeader
 import com.easypocket.mobile.ui.components.AppItemList
+import com.easypocket.mobile.ui.components.CategoryChipSelector
 import com.easypocket.mobile.ui.components.ConfirmSheet
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.ListIconCircle
@@ -80,6 +81,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
     var searchText by rememberSaveable { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newIcon by remember { mutableStateOf("") }
+    var newCategoryId by remember { mutableStateOf<String?>(null) }
     var showCreateSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteSheet by rememberSaveable { mutableStateOf(false) }
     var listToDelete by remember { mutableStateOf<ListCardData?>(null) }
@@ -134,6 +136,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                 onClick = {
                     newTitle = ""
                     newIcon = ""
+                    newCategoryId = null
                     showCreateSheet = true
                 },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
@@ -144,7 +147,7 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
     AppBottomSheet(
         visible = showCreateSheet,
         onDismiss = { showCreateSheet = false },
-        heightFraction = 0.75f,
+        heightFraction = 0.85f,
         title = t("listForm.newTitle", language),
     ) {
         ListTitleInput(
@@ -159,6 +162,16 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
             onValueChange = { newIcon = it },
             placeholder = t("listForm.icon", language),
         )
+        if (uiState.categories.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            FieldLabelSmall(t("products.categoryLabel", language))
+            Spacer(Modifier.height(8.dp))
+            CategoryChipSelector(
+                categories = uiState.categories,
+                selectedCategoryId = newCategoryId,
+                onSelect = { newCategoryId = it },
+            )
+        }
         Spacer(Modifier.height(16.dp))
         AppButton(
             text = t("common.create", language),
@@ -166,11 +179,12 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
                 val title = newTitle.trim()
                 if (title.isNotEmpty()) {
                     scope.launch {
-                        val id = vm.createList(title, newIcon.ifBlank { ListIcon.DEFAULT })
+                        val id = vm.createList(title, newIcon.ifBlank { ListIcon.DEFAULT }, newCategoryId)
                         if (id != null) {
                             showCreateSheet = false
                             newTitle = ""
                             newIcon = ""
+                            newCategoryId = null
                             toast.show(t("toast.listCreated", language), ToastType.SUCCESS)
                             openDetail(id)
                         }
@@ -263,19 +277,25 @@ private fun ListCardContent(
             )
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                card.category?.let { category ->
+                    Tag(
+                        text = "${category.icon} ${category.name}",
+                        size = TagSize.SM,
+                    )
+                }
                 Tag(
-                    text = t(
-                        "list.items",
-                        language,
-                        mapOf(
-                            "completed" to card.doneCount.toString(),
-                            "count" to card.itemCount.toString(),
-                        ),
-                    ),
-                    size = TagSize.SM,
-                )
-                Tag(
-                    text = t("list.total", language, mapOf("amount" to "$" + formatAmount(card.total))),
+                    text = when {
+                        card.itemCount == 0 -> t("list.emptyTag", language)
+                        card.hasPricedItems -> t(
+                            "list.summary",
+                            language,
+                            mapOf(
+                                "count" to card.itemCount.toString(),
+                                "amount" to "$" + formatAmount(card.total),
+                            ),
+                        )
+                        else -> t("list.itemsCount", language, mapOf("count" to card.itemCount.toString()))
+                    },
                     size = TagSize.SM,
                 )
             }
@@ -296,6 +316,12 @@ private fun ListCardContent(
             )
         }
     }
+}
+
+@Composable
+private fun FieldLabelSmall(text: String) {
+    val appColors = LocalAppColors.current
+    Text(text, color = appColors.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable

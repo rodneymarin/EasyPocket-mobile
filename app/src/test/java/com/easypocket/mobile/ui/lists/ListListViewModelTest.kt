@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.easypocket.mobile.data.local.EasyPocketDatabase
+import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.ShoppingListRepository
 import com.easypocket.mobile.data.repository.StoreRepository
@@ -38,9 +39,10 @@ class ListListViewModelTest {
             .allowMainThreadQueries().build()
         val stores = StoreRepository(db.storeDao())
         val products = ProductRepository(db, db.productDao(), db.priceDao())
-        val lists = ShoppingListRepository(db.listDao())
+        val lists = ShoppingListRepository(db, db.listDao())
+        val categories = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
         Seeder(db).seedIfEmpty()
-        return ListListViewModel(lists, products)
+        return ListListViewModel(lists, products, categories)
     }
 
     @Test
@@ -60,7 +62,7 @@ class ListListViewModelTest {
         vm.refresh()
         val first = vm.uiState.value.lists.first { it.list.title == "Lista Semanal - Verduras" }
         assertEquals(3, first.itemCount)
-        assertEquals(0, first.doneCount)
+        assertTrue(first.hasPricedItems)
         assertEquals(13.2, first.total, 0.001)
     }
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -47,7 +48,7 @@ class ListDetailViewModelTest {
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
-        listsRepository = ShoppingListRepository(db.listDao())
+        listsRepository = ShoppingListRepository(db, db.listDao())
         Seeder(db).seedIfEmpty()
         return ListDetailViewModel(
             listsRepository,
@@ -350,5 +351,51 @@ class ListDetailViewModelTest {
         assertTrue(vm.uiState.value.list!!.items.none { it.productId == "prod-004" || it.productId == "prod-005" })
         vm.load(listId)
         assertEquals(2, vm.uiState.value.list!!.items.size)
+    }
+
+    @Test
+    fun `renameList with a new category re-categorizes every item of the list`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat = categoryRepository.create("Vegetales")
+        val list = listsRepository.create("Mi lista")
+        vm.load(list.id)
+
+        vm.renameList("Mi lista", "$", cat.id)
+
+        val state = vm.uiState.value
+        assertEquals(cat.id, state.list?.categoryId)
+        state.list?.items?.forEach { assertEquals(cat.id, it.categoryId) }
+        val reloaded = listsRepository.getById(list.id)!!
+        assertEquals(cat.id, reloaded.categoryId)
+        reloaded.items.forEach { assertEquals(cat.id, it.categoryId) }
+    }
+
+    @Test
+    fun `renameList with null category clears item categories and keeps product memory`() = runTest {
+        val vm = createVm()
+        val categoryRepository = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())
+        val cat = categoryRepository.create("Vegetales")
+        val list = listsRepository.create("Mi lista", categoryId = cat.id)
+        db.listDao().insertItem(
+            com.easypocket.mobile.data.local.ShoppingListItemEntity(
+                shoppingListId = list.id,
+                productId = "prod-001",
+                storeId = null,
+                categoryId = cat.id,
+                quantity = 1.0,
+            )
+        )
+        db.productLastCategoryDao().upsert(
+            com.easypocket.mobile.data.local.ProductLastCategoryEntity("prod-001", cat.id)
+        )
+        vm.load(list.id)
+
+        vm.renameList("Mi lista", "$", null)
+
+        val reloaded = listsRepository.getById(list.id)!!
+        assertNull(reloaded.categoryId)
+        reloaded.items.forEach { assertNull(it.categoryId) }
+        assertEquals(cat.id, db.productLastCategoryDao().getByProductId("prod-001")!!.categoryId)
     }
 }

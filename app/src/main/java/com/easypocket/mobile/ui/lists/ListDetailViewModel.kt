@@ -176,7 +176,7 @@ class ListDetailViewModel @Inject constructor(
             .filter { it.isNotEmpty() }
             .forEach { line ->
                 val product = ListLogic.findBestProductMatch(line, products) ?: return@forEach
-                val itemId = listsRepository.addItem(listId, product.id, lastStoreId, 1.0)
+                val itemId = listsRepository.addItem(listId, product.id, lastStoreId, 1.0, state.list?.categoryId)
                 added.add(
                     ShoppingListItem(id = itemId, productId = product.id, quantity = 1.0, storeId = lastStoreId),
                 )
@@ -190,11 +190,19 @@ class ListDetailViewModel @Inject constructor(
         return added.size
     }
 
-    suspend fun renameList(title: String, icon: String) {
+    suspend fun renameList(title: String, icon: String, categoryId: String?) {
         val listId = _uiState.value.list?.id ?: return
         listsRepository.rename(listId, title, icon)
+        listsRepository.setCategory(listId, categoryId)
         val current = _uiState.value.list ?: return
-        _uiState.value = _uiState.value.copy(list = current.copy(title = title, icon = icon))
+        _uiState.value = _uiState.value.copy(
+            list = current.copy(
+                title = title,
+                icon = icon,
+                categoryId = categoryId,
+                items = current.items.map { it.copy(categoryId = categoryId) },
+            ),
+        )
     }
 
     suspend fun uncheckAll() {

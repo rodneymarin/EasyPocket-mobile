@@ -118,6 +118,12 @@ interface ShoppingListDao {
     @Query("UPDATE shopping_lists SET title = :title, icon = :icon WHERE id = :id")
     suspend fun updateTitleAndIcon(id: String, title: String, icon: String)
 
+    @Query("UPDATE shopping_lists SET category_id = :categoryId WHERE id = :id")
+    suspend fun updateCategory(id: String, categoryId: String?)
+
+    @Query("UPDATE shopping_lists SET category_id = NULL WHERE category_id IN (:categoryIds)")
+    suspend fun clearListCategory(categoryIds: List<String>)
+
     @Query("DELETE FROM shopping_lists WHERE id = :id")
     suspend fun deleteById(id: String)
 
@@ -133,13 +139,19 @@ interface ShoppingListDao {
     @Query("UPDATE shopping_list_items SET category_id = NULL WHERE category_id IN (:categoryIds)")
     suspend fun clearCategory(categoryIds: List<String>)
 
+    @Query("UPDATE shopping_list_items SET category_id = :categoryId WHERE shopping_list_id = :listId")
+    suspend fun setItemsCategory(listId: String, categoryId: String?)
+
     @Query("UPDATE shopping_list_items SET done = :done WHERE id = :id")
     suspend fun toggleItemDone(id: Long, done: Boolean)
 
     @Query("DELETE FROM shopping_list_items WHERE id IN (:ids)")
     suspend fun removeItems(ids: List<Long>)
 
-    @Query("UPDATE shopping_list_items SET shopping_list_id = :toListId WHERE id IN (:ids)")
+    @Query(
+        "UPDATE shopping_list_items SET shopping_list_id = :toListId, " +
+            "category_id = (SELECT category_id FROM shopping_lists WHERE id = :toListId) WHERE id IN (:ids)"
+    )
     suspend fun moveItems(ids: List<Long>, toListId: String)
 
     @Query("UPDATE shopping_list_items SET pinned = :pinned WHERE id IN (:ids)")

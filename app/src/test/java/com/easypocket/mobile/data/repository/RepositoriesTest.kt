@@ -31,7 +31,7 @@ class RepositoriesTest {
             .allowMainThreadQueries().build()
         stores = StoreRepository(db.storeDao())
         products = ProductRepository(db, db.productDao(), db.priceDao())
-        lists = ShoppingListRepository(db.listDao())
+        lists = ShoppingListRepository(db, db.listDao())
     }
 
     @After

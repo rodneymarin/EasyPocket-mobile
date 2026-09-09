@@ -42,7 +42,7 @@ class StoresTest {
             .allowMainThreadQueries().build()
         storesRepository = StoreRepository(db.storeDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
-        listsRepository = ShoppingListRepository(db.listDao())
+        listsRepository = ShoppingListRepository(db, db.listDao())
         Seeder(db).seedIfEmpty()
     }
 

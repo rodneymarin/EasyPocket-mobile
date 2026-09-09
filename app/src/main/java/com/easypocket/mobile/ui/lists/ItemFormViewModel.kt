@@ -30,6 +30,7 @@ data class ItemFormUiState(
     val productId: String? = null,
     val storeId: String? = null,
     val categoryId: String? = null,
+    val listCategoryId: String? = null,
     val quantityText: String = "1",
     val products: List<Product> = emptyList(),
     val stores: List<Store> = emptyList(),
@@ -76,7 +77,8 @@ class ItemFormViewModel @Inject constructor(
             val stores = storesRepository.getAll()
             val categories = categoryRepository.getAll()
             rememberedCategories = lastCategoryRepository.getAll().associate { it.productId to it.categoryId }
-            var state = _uiState.value.copy(products = products, stores = stores, categories = categories)
+            val listCategoryId = listsRepository.getById(listId)?.categoryId
+            var state = _uiState.value.copy(products = products, stores = stores, categories = categories, listCategoryId = listCategoryId)
             if (isEdit) {
                 val item = listsRepository.getById(listId)?.items?.firstOrNull { it.id == itemId }
                 if (item != null) {
@@ -84,7 +86,7 @@ class ItemFormViewModel @Inject constructor(
                     state = state.copy(
                         productId = item.productId,
                         storeId = item.storeId,
-                        categoryId = item.categoryId,
+                        categoryId = listCategoryId ?: item.categoryId,
                         quantityText = ListLogic.trimQuantity(item.quantity),
                     )
                 }
@@ -95,7 +97,7 @@ class ItemFormViewModel @Inject constructor(
                 if (rememberedStore != null && storeId == null) {
                     settingsRepository.setLastStore(null)
                 }
-                state = state.copy(productId = null, storeId = storeId, categoryId = null, quantityText = "1")
+                state = state.copy(productId = null, storeId = storeId, categoryId = listCategoryId, quantityText = "1")
             }
             _uiState.value = state.copy(isLoading = false)
             recompute()
@@ -108,8 +110,10 @@ class ItemFormViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 productId = productId,
-                // Pre-select the last category the user used for this product, if any.
-                categoryId = productId?.let { id -> rememberedCategories[id] },
+                // The list category always wins; otherwise pre-select the last
+                // category the user used for this product, if any.
+                categoryId = state.listCategoryId
+                    ?: productId?.let { id -> rememberedCategories[id] },
             )
         }
         recompute()
@@ -121,6 +125,7 @@ class ItemFormViewModel @Inject constructor(
     }
 
     fun setCategory(categoryId: String?) {
+        if (_uiState.value.listCategoryId != null) return
         _uiState.update { it.copy(categoryId = categoryId) }
     }
 
@@ -147,7 +152,7 @@ class ItemFormViewModel @Inject constructor(
         }
         val quantity = state.quantityText.toDouble()
         val storeId = state.storeId
-        val categoryId = state.categoryId
+        val categoryId = state.listCategoryId ?: state.categoryId
         val savedId = if (state.isEdit && originalItem != null) {
             listsRepository.updateItem(
                 originalItem!!.copy(
@@ -162,8 +167,11 @@ class ItemFormViewModel @Inject constructor(
             listsRepository.addItem(listId, state.productId, storeId, quantity, categoryId)
         }
         // Remember the category used for this product so it is pre-selected
-        // the next time the product is added to a list.
-        lastCategoryRepository.set(state.productId, categoryId)
+        // the next time the product is added to a list. Skipped when the
+        // category was forced by the list.
+        if (state.listCategoryId == null) {
+            lastCategoryRepository.set(state.productId, categoryId)
+        }
         if (storeId != null) {
             settingsRepository.setLastStore(storeId)
         }

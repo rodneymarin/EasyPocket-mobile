@@ -50,11 +50,12 @@ data class PriceEntity(
     val value: Double,
 )
 
-@Entity(tableName = "shopping_lists")
+@Entity(tableName = "shopping_lists", indices = [Index("category_id")])
 data class ShoppingListEntity(
     @PrimaryKey val id: String,
     val title: String,
     @ColumnInfo(name = "icon", defaultValue = "$") val icon: String = "$",
+    @ColumnInfo(name = "category_id") val categoryId: String? = null,
 )
 
 @Entity(

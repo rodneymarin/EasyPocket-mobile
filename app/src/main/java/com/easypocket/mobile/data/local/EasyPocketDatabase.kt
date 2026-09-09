@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PriceEntity::class, ShoppingListEntity::class, ShoppingListItemEntity::class,
         PurchaseHistoryEntity::class, PurchaseHistoryItemEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class EasyPocketDatabase : RoomDatabase() {
@@ -236,9 +236,21 @@ abstract class EasyPocketDatabase : RoomDatabase() {
                 "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_store_id` " +
                     "ON `shopping_list_items` (`store_id`)"
             )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_category_id` " +
+                        "ON `shopping_list_items` (`category_id`)"
+                )
+            }
+        }
+
+    // - Adds `shopping_lists.category_id` (nullable) so a list can force a
+    //   category on every item added to it. Null for existing lists.
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE shopping_lists ADD COLUMN category_id TEXT")
             db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_shopping_list_items_category_id` " +
-                    "ON `shopping_list_items` (`category_id`)"
+                "CREATE INDEX IF NOT EXISTS `index_shopping_lists_category_id` " +
+                    "ON `shopping_lists` (`category_id`)"
             )
         }
     }

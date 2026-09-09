@@ -47,6 +47,7 @@ class CategoryRepository @Inject constructor(
     suspend fun deleteAll(ids: List<String>) {
         db.withTransaction {
             listDao.clearCategory(ids)
+            listDao.clearListCategory(ids)
             lastCategoryDao.deleteForCategories(ids)
             categoryDao.deleteByIds(ids)
         }

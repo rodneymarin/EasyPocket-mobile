@@ -59,6 +59,7 @@ data class BackupList(
     val id: String,
     val title: String,
     val icon: String = "$",
+    val categoryId: String? = null,
 )
 
 @Serializable
