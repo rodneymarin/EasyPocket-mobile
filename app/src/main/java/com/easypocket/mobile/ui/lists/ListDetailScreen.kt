@@ -808,6 +808,20 @@ private fun ItemsList(
                 EmptyMessage(t("listDetail.noFilterMatch", language))
             }
             else -> {
+                // When every item is done the pending sections (and their
+                // category headers) disappear. A list with a fixed category
+                // must keep showing its category label above the done items.
+                if (uiState.pendingSections.isEmpty() && lockedCategory != null) {
+                    item(key = "category_${lockedCategory.id}") {
+                        Box(Modifier.animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = placementSpec)) {
+                            CategorySectionHeader(
+                                icon = lockedCategory.icon,
+                                name = lockedCategory.name,
+                                lockedSuffix = t("listDetail.categoryForWholeList", language),
+                            )
+                        }
+                    }
+                }
                 uiState.pendingSections.forEach { section ->
                     section.category?.let { category ->
                         item(key = "category_${category.id}") {
