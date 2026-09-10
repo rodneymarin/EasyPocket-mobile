@@ -289,7 +289,6 @@ private fun ListCardContent(
                     )
                 }
             }
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = when {
                     card.itemCount == 0 -> t("list.emptyTag", language)

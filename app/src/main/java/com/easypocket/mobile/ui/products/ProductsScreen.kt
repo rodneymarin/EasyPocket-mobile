@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,6 +87,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val SEARCH_DEBOUNCE_MS = 300L
+
+// ListItemRow's minHeight (56dp) minus its vertical padding (7.5dp x2).
+private val ProductCardContentMinHeight = 41.dp
 
 @Composable
 fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTick: Int = 0) {
@@ -297,7 +301,9 @@ private fun ProductCardContent(
 ) {
     val appColors = LocalAppColors.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        // ListItemRow reserves minHeight (56dp) minus its vertical padding;
+        // owning that space here keeps the title fixed when prices expand.
+        modifier = Modifier.fillMaxWidth().heightIn(min = ProductCardContentMinHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isSelectionMode) {
