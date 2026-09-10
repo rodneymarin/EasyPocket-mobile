@@ -305,23 +305,27 @@ private fun ProductCardContent(
             Spacer(Modifier.width(8.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(
-                text = product.productName,
-                color = appColors.text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
-            Row {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = product.productName,
+                    color = appColors.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 Tag(
                     text = t(ListLogic.unitLabelKey(product.unitOfMeasurement, 1.0), language),
                     size = TagSize.SM,
                 )
             }
         }
-        if (!isSelectionMode && product.prices.isNotEmpty()) {
+        if (!isSelectionMode) {
+            val expandable = product.prices.isNotEmpty()
             val rotation by animateFloatAsState(
                 targetValue = if (expanded) 180f else 0f,
                 animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
@@ -330,16 +334,17 @@ private fun ProductCardContent(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onToggleExpanded),
+                    .then(if (expandable) Modifier.clip(CircleShape).clickable(onClick = onToggleExpanded) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = appColors.textSecondary,
-                    modifier = Modifier.size(24.dp).graphicsLayer(rotationZ = rotation),
-                )
+                if (expandable) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = appColors.textSecondary,
+                        modifier = Modifier.size(24.dp).graphicsLayer(rotationZ = rotation),
+                    )
+                }
             }
         }
     }
