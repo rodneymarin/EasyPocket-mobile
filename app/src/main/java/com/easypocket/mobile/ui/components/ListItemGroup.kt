@@ -59,7 +59,7 @@ fun ListItemRow(
     backgroundColor: Color? = null,
     highlighted: Boolean = false,
     minHeight: Dp = 56.dp,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 7.5.dp),
     outerCorner: Dp = ListItemOuterCorner,
     innerCorner: Dp = ListItemInnerCorner,
     content: @Composable RowScope.() -> Unit,
