@@ -13,13 +13,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
 const val KEY_NEWLY_ADDED_ID = "newly_added_id"
-private const val HIGHLIGHT_DURATION_MS = 1670L
+
+// Two full blink cycles at the 175ms per-phase cadence, ending exactly at
+// the pulse peak so the closing fade-out is continuous (no final flash).
+private const val HIGHLIGHT_DURATION_MS = 525L
 
 @Composable
 fun <T> rememberHighlightedNewItemId(
     navBackStackEntry: NavBackStackEntry?,
     displayedIds: List<T>,
     listState: LazyListState,
+    indexOf: ((T) -> Int)? = null,
 ): T? {
     val savedStateHandle = navBackStackEntry?.savedStateHandle
     val newlyAdded by remember(savedStateHandle) {
@@ -36,7 +40,7 @@ fun <T> rememberHighlightedNewItemId(
 
     LaunchedEffect(pendingId, displayedIds) {
         val id = pendingId ?: return@LaunchedEffect
-        val index = displayedIds.indexOf(id)
+        val index = indexOf?.invoke(id) ?: displayedIds.indexOf(id)
         if (index < 0) return@LaunchedEffect
         listState.animateScrollToItem(index)
         highlighted = id

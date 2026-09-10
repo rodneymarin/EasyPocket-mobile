@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 
-private val ListItemOuterCorner = 20.dp
+private val ListItemOuterCorner = 16.dp
 private val ListItemInnerCorner = 4.dp
 
 @Composable
@@ -71,7 +71,7 @@ fun ListItemRow(
 
     val highlightBase by animateFloatAsState(
         targetValue = if (highlighted) 1f else 0f,
-        animationSpec = tween(durationMillis = if (highlighted) 150 else 300, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = if (highlighted) 105 else 210, easing = FastOutSlowInEasing),
         label = "newItemHighlightBase",
     )
     val pulseFactor = if (highlighted) {
@@ -79,7 +79,7 @@ fun ListItemRow(
             initialValue = 0.35f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+                animation = tween(durationMillis = 175, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse,
             ),
             label = "newItemPulseFactor",

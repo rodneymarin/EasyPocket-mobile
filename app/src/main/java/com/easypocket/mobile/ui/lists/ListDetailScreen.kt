@@ -793,12 +793,29 @@ private fun ItemsList(
         stiffness = Spring.StiffnessMediumLow,
         visibilityThreshold = IntOffset.VisibilityThreshold,
     )
+    // The lazy list interleaves a category header before every section, so
+    // the scroll index of an item is its position among sections + items.
+    fun pendingListIndexOf(itemId: Long): Int {
+        var index = 0
+        var found = -1
+        uiState.pendingSections.forEach { section ->
+            index++
+            section.items.forEach { item ->
+                if (item.id == itemId && found < 0) found = index
+                index++
+            }
+        }
+        return found
+    }
+
     val highlightedItemId = rememberHighlightedNewItemId(
         navBackStackEntry = navBackStackEntry,
         displayedIds = uiState.pendingItems.map { it.id },
         listState = listState,
+        indexOf = ::pendingListIndexOf,
     )
     AppItemList(
+        listState = listState,
         footerText = t(
             "list.items",
             language,
