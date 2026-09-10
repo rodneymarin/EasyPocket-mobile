@@ -276,32 +276,12 @@ private fun ListCardContent(
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                text = card.list.title,
-                color = appColors.text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = when {
-                        card.itemCount == 0 -> t("list.emptyTag", language)
-                        card.hasPricedItems -> t(
-                            "list.summary",
-                            language,
-                            mapOf(
-                                "count" to card.itemCount.toString(),
-                                "amount" to formatAmount(language, card.total),
-                            ),
-                        )
-                        else -> t("list.itemsCount", language, mapOf("count" to card.itemCount.toString()))
-                    },
+                    text = card.list.title,
                     color = appColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -313,6 +293,26 @@ private fun ListCardContent(
                     )
                 }
             }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = when {
+                    card.itemCount == 0 -> t("list.emptyTag", language)
+                    card.hasPricedItems -> t(
+                        "list.summary",
+                        language,
+                        mapOf(
+                            "count" to card.itemCount.toString(),
+                            "amount" to formatAmount(language, card.total),
+                        ),
+                    )
+                    else -> t("list.itemsCount", language, mapOf("count" to card.itemCount.toString()))
+                },
+                color = appColors.textSecondary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
