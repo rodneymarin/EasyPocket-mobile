@@ -29,7 +29,7 @@ class RepositoriesTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        stores = StoreRepository(db.storeDao())
+        stores = StoreRepository(db, db.storeDao(), db.priceDao())
         products = ProductRepository(db, db.productDao(), db.priceDao())
         lists = ShoppingListRepository(db, db.listDao())
     }

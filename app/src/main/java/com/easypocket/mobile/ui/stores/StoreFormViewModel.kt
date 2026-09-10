@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.stores
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.DeletedStores
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.Store
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,9 +69,12 @@ class StoreFormViewModel @Inject constructor(
         onSaved(if (state.isEdit) null else saved.id)
     }
 
-    suspend fun delete(onDeleted: () -> Unit) {
-        val id = _uiState.value.store?.id ?: return
-        storesRepository.deleteAll(listOf(id))
-        onDeleted()
+    suspend fun delete(): DeletedStores? {
+        val id = _uiState.value.store?.id ?: return null
+        return storesRepository.deleteAll(listOf(id))
+    }
+
+    suspend fun restore(deletion: DeletedStores) {
+        storesRepository.restore(deletion)
     }
 }

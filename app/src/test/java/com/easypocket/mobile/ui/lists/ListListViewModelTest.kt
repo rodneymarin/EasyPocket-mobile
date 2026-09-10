@@ -37,7 +37,7 @@ class ListListViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        val stores = StoreRepository(db.storeDao())
+        val stores = StoreRepository(db, db.storeDao(), db.priceDao())
         val products = ProductRepository(db, db.productDao(), db.priceDao())
         val lists = ShoppingListRepository(db, db.listDao())
         val categories = CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao())

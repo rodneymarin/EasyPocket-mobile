@@ -29,7 +29,20 @@ class PurchaseHistoryRepository @Inject constructor(
 
     fun observeAll(): Flow<List<PurchaseHistoryWithItems>> = historyDao.observeAll()
 
-    suspend fun delete(id: String) = historyDao.deleteById(id)
+    suspend fun delete(id: String): PurchaseHistoryWithItems? {
+        val record = historyDao.observeAll().first().firstOrNull { it.record.id == id }
+            ?: return null
+        historyDao.deleteById(id)
+        return record
+    }
+
+    suspend fun restore(record: PurchaseHistoryWithItems) {
+        db.withTransaction {
+            historyDao.insertHistory(record.record)
+            historyDao.insertItems(record.items)
+            if (record.categoryTotals.isNotEmpty()) historyDao.insertCategoryTotals(record.categoryTotals)
+        }
+    }
 
     suspend fun archiveCompleted(
         listId: String,

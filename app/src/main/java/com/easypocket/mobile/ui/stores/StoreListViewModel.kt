@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.stores
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.DeletedStores
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.ListLogic
 import com.easypocket.mobile.domain.Store
@@ -58,11 +59,17 @@ class StoreListViewModel @Inject constructor(
         _uiState.update { it.copy(selection = if (id in it.selection) it.selection - id else it.selection + id) }
     }
 
-    suspend fun deleteSelected() {
+    suspend fun deleteSelected(): DeletedStores? {
         val ids = _uiState.value.selection
-        if (ids.isEmpty()) return
-        storesRepository.deleteAll(ids.toList())
+        if (ids.isEmpty()) return null
+        val deleted = storesRepository.deleteAll(ids.toList())
         _uiState.update { it.copy(selection = emptySet()) }
+        refresh()
+        return deleted
+    }
+
+    suspend fun restore(deletion: DeletedStores) {
+        storesRepository.restore(deletion)
         refresh()
     }
 

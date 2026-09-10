@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.products
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.DeletedProducts
 import com.easypocket.mobile.data.repository.ProductRepository
 import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.domain.ListLogic
@@ -122,10 +123,13 @@ class ProductFormViewModel @Inject constructor(
         onSaved(if (state.isEdit) null else saved.id)
     }
 
-    suspend fun delete(onDeleted: () -> Unit) {
-        val id = _uiState.value.productId ?: return
-        productsRepository.deleteAll(listOf(id))
-        onDeleted()
+    suspend fun delete(): DeletedProducts? {
+        val id = _uiState.value.productId ?: return null
+        return productsRepository.deleteAll(listOf(id))
+    }
+
+    suspend fun restore(deletion: DeletedProducts) {
+        productsRepository.restore(deletion)
     }
 
     fun toProduct(): Product = Product(

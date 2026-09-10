@@ -172,9 +172,8 @@ class CategoryFormViewModelTest {
         db.productLastCategoryDao().upsert(ProductLastCategoryEntity("p1", created.id))
         val v = vm()
         v.load(created.id)
-        var deleted = false
-        v.delete { deleted = true }
-        assertTrue(deleted)
+        val deleted = v.delete()
+        assertTrue(deleted != null)
         assertTrue(categoriesRepository.getAll().isEmpty())
         val items = db.listDao().getById("l1")!!.items
         assertEquals(1, items.size)

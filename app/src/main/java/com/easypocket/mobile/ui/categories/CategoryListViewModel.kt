@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.categories
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.DeletedCategories
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListLogic
@@ -58,11 +59,17 @@ class CategoryListViewModel @Inject constructor(
         _uiState.update { it.copy(selection = if (id in it.selection) it.selection - id else it.selection + id) }
     }
 
-    suspend fun deleteSelected() {
+    suspend fun deleteSelected(): DeletedCategories? {
         val ids = _uiState.value.selection
-        if (ids.isEmpty()) return
-        categoriesRepository.deleteAll(ids.toList())
+        if (ids.isEmpty()) return null
+        val deleted = categoriesRepository.deleteAll(ids.toList())
         _uiState.update { it.copy(selection = emptySet()) }
+        refresh()
+        return deleted
+    }
+
+    suspend fun restore(deletion: DeletedCategories) {
+        categoriesRepository.restore(deletion)
         refresh()
     }
 

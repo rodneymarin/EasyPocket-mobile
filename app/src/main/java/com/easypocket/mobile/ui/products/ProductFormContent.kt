@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.easypocket.mobile.data.repository.DeletedProducts
 import com.easypocket.mobile.domain.Store
 import com.easypocket.mobile.domain.UnitOfMeasurement
 import com.easypocket.mobile.i18n.LocalLanguage
@@ -60,6 +61,7 @@ import com.easypocket.mobile.ui.components.ListItemGroup
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.SelectField
 import com.easypocket.mobile.ui.components.SelectOption
+import com.easypocket.mobile.ui.components.formatAmount
 import com.easypocket.mobile.ui.theme.AppColors
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.launch
@@ -70,7 +72,7 @@ fun ProductFormContent(
     isSheet: Boolean = false,
     autoFocusName: Boolean = false,
     onSaved: () -> Unit,
-    onDeleted: () -> Unit,
+    onDeleted: (DeletedProducts?) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -104,7 +106,7 @@ fun ProductFormContent(
         confirmLabel = t("products.deleteModal.confirm", language),
         onConfirm = {
             showDeleteConfirm = false
-            scope.launch { vm.delete(onDeleted) }
+            scope.launch { onDeleted(vm.delete()) }
         },
         onDismiss = { showDeleteConfirm = false },
     )
@@ -224,7 +226,7 @@ private fun ProductFormActions(
     state: ProductFormUiState,
     vm: ProductFormViewModel,
     onSaved: () -> Unit,
-    onDeleted: () -> Unit,
+    onDeleted: (DeletedProducts?) -> Unit,
     onCancel: () -> Unit,
     onDeleteRequest: () -> Unit,
     language: com.easypocket.mobile.i18n.Language,
@@ -448,7 +450,7 @@ private fun PriceCardContent(
             modifier = Modifier.weight(1f),
         )
         Text(
-            "$${trimPrice(value)}",
+            value.toDoubleOrNull()?.let { formatAmount(LocalLanguage.current, it) } ?: value,
             color = appColors.text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
@@ -539,9 +541,4 @@ private fun DecimalTextField(
         selectAllOnFocus = true,
         autoFocus = autoFocus,
     )
-}
-
-private fun trimPrice(value: String): String {
-    val parsed = value.toDoubleOrNull() ?: return value
-    return String.format(java.util.Locale.US, "%.2f", parsed)
 }

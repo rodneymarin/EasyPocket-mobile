@@ -1,6 +1,7 @@
 package com.easypocket.mobile.ui.categories
 
 import androidx.lifecycle.ViewModel
+import com.easypocket.mobile.data.repository.DeletedCategories
 import com.easypocket.mobile.data.repository.CategoryRepository
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListIcon
@@ -72,9 +73,12 @@ class CategoryFormViewModel @Inject constructor(
         onSaved(savedId)
     }
 
-    suspend fun delete(onDeleted: () -> Unit) {
-        val id = _uiState.value.category?.id ?: return
-        categoriesRepository.deleteAll(listOf(id))
-        onDeleted()
+    suspend fun delete(): DeletedCategories? {
+        val id = _uiState.value.category?.id ?: return null
+        return categoriesRepository.deleteAll(listOf(id))
+    }
+
+    suspend fun restore(deletion: DeletedCategories) {
+        categoriesRepository.restore(deletion)
     }
 }

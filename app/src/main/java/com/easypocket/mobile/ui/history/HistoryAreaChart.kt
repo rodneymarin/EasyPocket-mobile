@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -31,11 +32,12 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import com.easypocket.mobile.i18n.LocalLanguage
+import com.easypocket.mobile.ui.components.formatAmountCompact
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("dd/MM")
 
@@ -43,6 +45,7 @@ private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("dd/MM")
 fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modifier) {
     val appColors = LocalAppColors.current
     val isDark = LocalIsDark.current
+    val language = LocalLanguage.current
     val maxValue = points.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: return
     val lineColor = appColors.primary
     val guidelineColor = if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.10f)
@@ -63,9 +66,15 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
         }
     }
 
+    val amountFormatter = remember(language) {
+        CartesianValueFormatter { _, value, _ ->
+            formatAmountCompact(language, value)
+        }
+    }
+
     Column(modifier.fillMaxWidth()) {
         Text(
-            text = "$${String.format(Locale.US, "%.2f", maxValue)}",
+            text = formatAmountCompact(language, maxValue),
             color = appColors.textSecondary,
             fontSize = 11.sp,
             modifier = Modifier.align(Alignment.End).padding(end = 4.dp),
@@ -103,6 +112,19 @@ fun HistoryAreaChart(points: List<HistoryChartPoint>, modifier: Modifier = Modif
                                 )
                             ),
                     ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            valueFormatter = amountFormatter,
+                            label =
+                                rememberAxisLabelComponent(
+                                    style = TextStyle(color = appColors.textSecondary, fontSize = 11.sp),
+                                ),
+                            guideline =
+                                rememberAxisGuidelineComponent(
+                                    fill = Fill(guidelineColor),
+                                    thickness = 1.dp,
+                                ),
+                        ),
                     bottomAxis =
                         HorizontalAxis.rememberBottom(
                             valueFormatter = dateFormatter,

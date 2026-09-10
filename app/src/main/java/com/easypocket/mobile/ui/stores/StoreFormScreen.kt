@@ -46,9 +46,11 @@ import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.notifyDataRestored
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
+import com.easypocket.mobile.data.repository.DeletedStores
 import kotlinx.coroutines.launch
 
 @Composable
@@ -78,9 +80,19 @@ fun StoreFormScreen(navController: NavController, storeId: String) {
                 ToastType.SUCCESS,
             )
         },
-        onDeleted = {
+        onDeleted = { deleted ->
             goBack()
-            toast.show(t("toast.storeDeleted", language), ToastType.SUCCESS)
+            if (deleted != null) {
+                toast.show(
+                    t("toast.storeDeleted", language),
+                    ToastType.DESTRUCTIVE,
+                    actionLabel = t("common.undo", language),
+                    onAction = {
+                        vm.restore(deleted)
+                        navController.notifyDataRestored()
+                    },
+                )
+            }
         },
         onCancel = ::goBack,
     )
@@ -91,7 +103,7 @@ fun StoreFormContent(
     vm: StoreFormViewModel,
     autoFocusName: Boolean = false,
     onSaved: () -> Unit,
-    onDeleted: () -> Unit,
+    onDeleted: (DeletedStores?) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -171,8 +183,9 @@ fun StoreFormContent(
         confirmLabel = t("stores.deleteModal.confirm", language),
         onConfirm = {
             scope.launch {
-                vm.delete { onDeleted() }
+                val deleted = vm.delete()
                 showDeleteSheet = false
+                onDeleted(deleted)
             }
         },
         onDismiss = { showDeleteSheet = false },

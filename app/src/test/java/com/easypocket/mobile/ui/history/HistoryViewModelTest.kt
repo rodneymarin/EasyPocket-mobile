@@ -88,9 +88,49 @@ class HistoryViewModelTest {
         val vm = HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao()))
         awaitRecordCount(vm, 1)
 
-        vm.deleteRecord("h1")
+        vm.deleteRecord(vm.uiState.value.records.first { it.record.id == "h1" })
 
         awaitRecordCount(vm, 0)
+    }
+
+    @Test
+    fun `restoreRecord brings back a deleted record with its items`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
+            .allowMainThreadQueries().build()
+        val repo = PurchaseHistoryRepository(
+            db = db,
+            historyDao = db.purchaseHistoryDao(),
+            listDao = db.listDao(),
+            productDao = db.productDao(),
+            priceDao = db.priceDao(),
+            storeDao = db.storeDao(),
+        )
+        db.purchaseHistoryDao().insertHistory(
+            PurchaseHistoryEntity("h1", "Lista", "$", 0L, 20.0, 1)
+        )
+        db.purchaseHistoryDao().insertItems(
+            listOf(
+                com.easypocket.mobile.data.local.PurchaseHistoryItemEntity(
+                    historyId = "h1", productName = "Milk", storeName = null,
+                    quantity = 2.0, unitPrice = 10.0, totalPrice = 20.0, itemUid = "u1",
+                )
+            )
+        )
+        val vm = HistoryViewModel(repo, CategoryRepository(db, db.categoryDao(), db.listDao(), db.productLastCategoryDao()))
+        val record = vm.uiState.value.records.firstOrNull() ?: run {
+            awaitRecordCount(vm, 1)
+            vm.uiState.value.records.first()
+        }
+
+        vm.deleteRecord(record)
+        awaitRecordCount(vm, 0)
+
+        vm.restoreRecord(record)
+
+        awaitRecordCount(vm, 1)
+        assertEquals("h1", vm.uiState.value.records.first().record.id)
+        assertTrue(vm.uiState.value.records.first().items.isNotEmpty())
     }
 
     private fun awaitRecordCount(vm: HistoryViewModel, count: Int) {

@@ -39,7 +39,7 @@ class ProductFormViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        storesRepository = StoreRepository(db.storeDao())
+        storesRepository = StoreRepository(db, db.storeDao(), db.priceDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         Seeder(db).seedIfEmpty()
     }
@@ -207,13 +207,12 @@ class ProductFormViewModelTest {
     }
 
     @Test
-    fun `delete removes the product and calls onDeleted`() = runTest {
+    fun `delete removes the product and returns its snapshot`() = runTest {
         repos()
         val vm = vm()
         vm.load("prod-001")
-        var deleted = false
-        vm.delete { deleted = true }
-        assertTrue(deleted)
+        val deleted = vm.delete()
+        assertTrue(deleted != null)
         assertNull(productsRepository.getByName("Papa"))
     }
 }

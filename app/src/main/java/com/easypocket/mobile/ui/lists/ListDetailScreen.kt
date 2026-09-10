@@ -109,11 +109,12 @@ import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.formatAmount
+import com.easypocket.mobile.ui.components.rememberDataRestoredTick
 import com.easypocket.mobile.ui.components.rememberHighlightedNewItemId
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
-import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -144,6 +145,11 @@ fun ListDetailScreen(navController: NavController, listId: String) {
     var quickAddInput by remember { mutableStateOf("") }
 
     LaunchedEffect(listId) { vm.load(listId) }
+
+    val restoreTick = rememberDataRestoredTick(backStackEntry)
+    LaunchedEffect(restoreTick.value) {
+        if (restoreTick.value > 0L) vm.load(listId)
+    }
 
     BackHandler(enabled = uiState.isSelectionMode) { vm.clearSelection() }
 
@@ -322,9 +328,14 @@ fun ListDetailScreen(navController: NavController, listId: String) {
         confirmLabel = t("listDetail.removeConfirm", language),
         onConfirm = {
             scope.launch {
-                vm.removeCompleted()
+                val deleted = vm.removeCompleted()
                 showRemoveCompleted = false
-                toast.show(t("toast.completedDeleted", language), ToastType.SUCCESS)
+                toast.show(
+                    t("toast.completedDeleted", language),
+                    ToastType.DESTRUCTIVE,
+                    actionLabel = t("common.undo", language),
+                    onAction = { vm.restoreItems(deleted) },
+                )
             }
         },
         onDismiss = { showRemoveCompleted = false },
@@ -379,9 +390,14 @@ fun ListDetailScreen(navController: NavController, listId: String) {
         confirmLabel = t("listDetail.removeConfirm", language),
         onConfirm = {
             scope.launch {
-                vm.deleteSelected()
+                val deleted = vm.deleteSelected()
                 showDeleteSelected = false
-                toast.show(t("toast.itemsDeleted", language), ToastType.SUCCESS)
+                toast.show(
+                    t("toast.itemsDeleted", language),
+                    ToastType.DESTRUCTIVE,
+                    actionLabel = t("common.undo", language),
+                    onAction = { vm.restoreItems(deleted) },
+                )
             }
         },
         onDismiss = { showDeleteSelected = false },
@@ -521,6 +537,7 @@ private fun ActionBar(
                             onDismissMenu()
                             onCopy()
                         },
+                        enabled = uiState.hasItems,
                     )
                     DropdownItem(
                         label = t("listDetail.quickAdd", language),
@@ -702,12 +719,12 @@ private fun TotalsBlock(total: Double, cartTotal: Double, language: Language) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(t("listDetail.globalTotal", language), color = appColors.text, fontSize = 17.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(6.dp))
-            Text("$${formatAmount(total)}", color = appColors.text, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+            Text(formatAmount(language, total), color = appColors.text, fontSize = 17.sp, fontWeight = FontWeight.Medium)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(t("listDetail.cartTotal", language), color = appColors.textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(6.dp))
-            Text("$${formatAmount(cartTotal)}", color = appColors.textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(formatAmount(language, cartTotal), color = appColors.textSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -1068,8 +1085,7 @@ private fun DetailItemCardContent(
                         Text(
                             text = buildString {
                                 if (price * item.quantity > 0) {
-                                    append("$")
-                                    append(formatAmount(price * item.quantity))
+                                    append(formatAmount(language, price * item.quantity))
                                     append(" | ")
                                 }
                                 append(ListLogic.trimQuantity(item.quantity))
@@ -1335,5 +1351,3 @@ private fun MoveItemsSheet(
         }
     }
 }
-
-private fun formatAmount(value: Double): String = String.format(Locale.US, "%.2f", value)

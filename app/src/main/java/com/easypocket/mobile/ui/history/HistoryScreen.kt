@@ -47,12 +47,12 @@ import com.easypocket.mobile.ui.components.ListItemGroup
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.formatAmount
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private val DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 private val ZONE: ZoneId = ZoneId.systemDefault()
@@ -104,7 +104,7 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
                         Text(t("history.total", language), color = appColors.textSecondary, fontSize = 14.sp)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "$${formatAmount(uiState.grandTotal)}",
+                            text = formatAmount(language, uiState.grandTotal),
                             color = appColors.text,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -157,12 +157,17 @@ fun HistoryScreen(onMenuClick: () -> Unit) {
         } ?: "",
         confirmLabel = t("history.deleteModal.confirm", language),
         onConfirm = {
-            val id = recordToDelete?.record?.id
+            val record = recordToDelete
             recordToDelete = null
-            if (id != null) {
+            if (record != null) {
                 scope.launch {
-                    vm.deleteRecord(id)
-                    toast.show(t("toast.historyDeleted", language), ToastType.SUCCESS)
+                    vm.deleteRecord(record)
+                    toast.show(
+                        t("toast.historyDeleted", language),
+                        ToastType.DESTRUCTIVE,
+                        actionLabel = t("common.undo", language),
+                        onAction = { vm.restoreRecord(record) },
+                    )
                 }
             }
         },
@@ -262,7 +267,7 @@ private fun RecordCardContent(record: PurchaseHistoryWithItems) {
             )
         }
         Text(
-            text = "$${formatAmount(record.record.totalAmount)}",
+            text = formatAmount(LocalLanguage.current, record.record.totalAmount),
             color = appColors.text,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
@@ -296,14 +301,14 @@ private fun RecordDetailSheet(
                             text = listOfNotNull(
                                 item.storeName ?: t("listDetail.noStore", language),
                                 categoryNameOf(item.categoryCode),
-                                "${ListLogic.trimQuantity(item.quantity)} x $${formatAmount(item.unitPrice)}",
+                                "${ListLogic.trimQuantity(item.quantity)} x ${formatAmount(language, item.unitPrice)}",
                             ).joinToString(" · "),
                             color = appColors.textSecondary,
                             fontSize = 12.sp,
                         )
                     }
                     Text(
-                        text = "$${formatAmount(item.totalPrice)}",
+                        text = formatAmount(language, item.totalPrice),
                         color = appColors.text,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -316,7 +321,7 @@ private fun RecordDetailSheet(
             Text(t("history.total", language), color = appColors.textSecondary, fontSize = 15.sp)
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "$${formatAmount(current.record.totalAmount)}",
+                text = formatAmount(language, current.record.totalAmount),
                 color = appColors.text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
@@ -327,5 +332,3 @@ private fun RecordDetailSheet(
 
 private fun formatDate(date: Long): String =
     Instant.ofEpochMilli(date).atZone(ZONE).toLocalDate().format(DATE_FORMAT)
-
-private fun formatAmount(value: Double): String = String.format(Locale.US, "%.2f", value)

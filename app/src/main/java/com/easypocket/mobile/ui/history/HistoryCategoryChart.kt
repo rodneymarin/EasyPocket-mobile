@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
+import com.easypocket.mobile.ui.components.formatAmount
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.Insets
@@ -40,7 +41,6 @@ import com.patrykandpatrick.vico.compose.pie.data.PieChartModelProducer
 import com.patrykandpatrick.vico.compose.pie.data.PieValueFormatter
 import com.patrykandpatrick.vico.compose.pie.data.pieModel
 import com.patrykandpatrick.vico.compose.pie.rememberPieChart
-import java.util.Locale
 
 private val CategoryPalette = listOf(
     0xFF1E88E5.toInt(), // azul
@@ -114,6 +114,7 @@ private fun Legend(
     noCategoryLabel: String,
 ) {
     val appColors = LocalAppColors.current
+    val language = LocalLanguage.current
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,7 +141,7 @@ private fun Legend(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "$${String.format(Locale.US, "%.2f", slice.total)}",
+                    text = formatAmount(language, slice.total),
                     color = appColors.textSecondary,
                     fontSize = 11.sp,
                 )

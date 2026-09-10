@@ -38,7 +38,9 @@ import com.easypocket.mobile.ui.components.FormTextField
 import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.notifyDataRestored
 import com.easypocket.mobile.ui.theme.LocalAppColors
+import com.easypocket.mobile.data.repository.DeletedCategories
 import kotlinx.coroutines.launch
 
 @Composable
@@ -68,9 +70,19 @@ fun CategoryFormScreen(navController: NavController, categoryId: String) {
                 ToastType.SUCCESS,
             )
         },
-        onDeleted = {
+        onDeleted = { deleted ->
             goBack()
-            toast.show(t("toast.categoryDeleted", language), ToastType.SUCCESS)
+            if (deleted != null) {
+                toast.show(
+                    t("toast.categoryDeleted", language),
+                    ToastType.DESTRUCTIVE,
+                    actionLabel = t("common.undo", language),
+                    onAction = {
+                        vm.restore(deleted)
+                        navController.notifyDataRestored()
+                    },
+                )
+            }
         },
         onCancel = ::goBack,
     )
@@ -81,7 +93,7 @@ fun CategoryFormContent(
     vm: CategoryFormViewModel,
     autoFocusName: Boolean = false,
     onSaved: () -> Unit,
-    onDeleted: () -> Unit,
+    onDeleted: (DeletedCategories?) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,8 +175,9 @@ fun CategoryFormContent(
         confirmLabel = t("categories.deleteModal.confirm", language),
         onConfirm = {
             scope.launch {
-                vm.delete { onDeleted() }
+                val deleted = vm.delete()
                 showDeleteSheet = false
+                onDeleted(deleted)
             }
         },
         onDismiss = { showDeleteSheet = false },

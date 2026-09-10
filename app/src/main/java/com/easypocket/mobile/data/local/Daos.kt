@@ -59,6 +59,9 @@ interface ProductDao {
     @Insert
     suspend fun insert(product: ProductEntity)
 
+    @Insert
+    suspend fun insertAll(products: List<ProductEntity>)
+
     @Update
     suspend fun update(product: ProductEntity)
 
@@ -85,6 +88,12 @@ interface ProductLastCategoryDao {
 
     @Query("DELETE FROM product_last_categories WHERE category_id IN (:categoryIds)")
     suspend fun deleteForCategories(categoryIds: List<String>)
+
+    @Query("SELECT * FROM product_last_categories WHERE product_id IN (:productIds)")
+    suspend fun getByProductIds(productIds: List<String>): List<ProductLastCategoryEntity>
+
+    @Query("SELECT * FROM product_last_categories WHERE category_id IN (:categoryIds)")
+    suspend fun getByCategoryIds(categoryIds: List<String>): List<ProductLastCategoryEntity>
 }
 
 @Dao
@@ -130,6 +139,9 @@ interface ShoppingListDao {
     @Insert
     suspend fun insertItem(item: ShoppingListItemEntity): Long
 
+    @Insert
+    suspend fun insertItems(items: List<ShoppingListItemEntity>)
+
     @Update
     suspend fun updateItem(item: ShoppingListItemEntity)
 
@@ -156,6 +168,24 @@ interface ShoppingListDao {
 
     @Query("UPDATE shopping_list_items SET pinned = :pinned WHERE id IN (:ids)")
     suspend fun pinItems(ids: List<Long>, pinned: Boolean)
+
+    @Query("UPDATE shopping_list_items SET store_id = :storeId WHERE id IN (:ids)")
+    suspend fun setItemsStore(ids: List<Long>, storeId: String?)
+
+    @Query("UPDATE shopping_list_items SET category_id = :categoryId WHERE id IN (:ids)")
+    suspend fun setItemsCategoryByIds(ids: List<Long>, categoryId: String?)
+
+    @Query("SELECT * FROM shopping_list_items WHERE product_id IN (:productIds)")
+    suspend fun getItemsByProductIds(productIds: List<String>): List<ShoppingListItemEntity>
+
+    @Query("SELECT * FROM shopping_list_items WHERE store_id IN (:storeIds)")
+    suspend fun getItemsByStoreIds(storeIds: List<String>): List<ShoppingListItemEntity>
+
+    @Query("SELECT * FROM shopping_list_items WHERE category_id IN (:categoryIds)")
+    suspend fun getItemsByCategoryIds(categoryIds: List<String>): List<ShoppingListItemEntity>
+
+    @Query("SELECT * FROM shopping_lists WHERE category_id IN (:categoryIds)")
+    suspend fun getListsByCategoryIds(categoryIds: List<String>): List<ShoppingListEntity>
 
     @Query("UPDATE shopping_list_items SET pinned = 0 WHERE shopping_list_id = :listId")
     suspend fun unpinAll(listId: String)

@@ -211,13 +211,14 @@ class ListDetailViewModel @Inject constructor(
         listsRepository.uncheckAll(current.id)
     }
 
-    suspend fun removeCompleted() {
-        val current = _uiState.value.list ?: return
-        val doneIds = current.items.filter { it.done }.map { it.id }
-        if (doneIds.isEmpty()) return
+    suspend fun removeCompleted(): List<ShoppingListItem> {
+        val current = _uiState.value.list ?: return emptyList()
+        val deleted = current.items.filter { it.done }
+        if (deleted.isEmpty()) return emptyList()
         _uiState.value = _uiState.value.copy(list = current.copy(items = current.items.filter { !it.done }))
-        listsRepository.removeItems(doneIds)
+        listsRepository.removeItems(deleted.map { it.id })
         resetFilterIfEmpty()
+        return deleted
     }
 
     suspend fun archiveCompleted(manualTotal: Double? = null) {
@@ -250,16 +251,41 @@ class ListDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selection = emptySet())
     }
 
-    suspend fun deleteSelected() {
+    suspend fun deleteSelected(): List<ShoppingListItem> {
         val ids = _uiState.value.selection
-        if (ids.isEmpty()) return
-        val current = _uiState.value.list ?: return
+        if (ids.isEmpty()) return emptyList()
+        val current = _uiState.value.list ?: return emptyList()
+        val deleted = current.items.filter { it.id in ids }
         _uiState.value = _uiState.value.copy(
             list = current.copy(items = current.items.filter { it.id !in ids }),
             selection = emptySet(),
         )
         listsRepository.removeItems(ids.toList())
         resetFilterIfEmpty()
+        return deleted
+    }
+
+    // Undo for removeCompleted/deleteSelected. Items whose product or store
+    // no longer exist would violate foreign keys, so they are left out.
+    suspend fun restoreItems(items: List<ShoppingListItem>) {
+        val stateBefore = _uiState.value
+        val listId = stateBefore.list?.id ?: return
+        if (items.isEmpty()) return
+        val restorable = items.filter { item ->
+            item.productId in stateBefore.productsById &&
+                (item.storeId == null || stateBefore.stores.any { it.id == item.storeId })
+        }
+        if (restorable.isEmpty()) return
+        val current = _uiState.value.list ?: return
+        val restoredIds = restorable.map { it.id }.toSet()
+        _uiState.value = _uiState.value.copy(
+            list = current.copy(items = current.items.filter { it.id !in restoredIds } + restorable),
+        )
+        try {
+            listsRepository.restoreItems(listId, restorable)
+        } catch (t: Throwable) {
+            _uiState.value = stateBefore
+        }
     }
 
     suspend fun moveSelected(toListId: String) {
@@ -285,9 +311,9 @@ class ListDetailViewModel @Inject constructor(
         listsRepository.pinItems(ids.toList(), pinned)
     }
 
-    suspend fun deleteList() {
-        val listId = _uiState.value.list?.id ?: return
-        listsRepository.delete(listId)
+    suspend fun deleteList(): ShoppingList? {
+        val listId = _uiState.value.list?.id ?: return null
+        return listsRepository.delete(listId)
     }
 
     suspend fun moveTargetLists(): List<ShoppingList> {

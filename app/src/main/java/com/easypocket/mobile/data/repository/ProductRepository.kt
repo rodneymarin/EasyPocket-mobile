@@ -5,6 +5,9 @@ import com.easypocket.mobile.data.local.PriceDao
 import com.easypocket.mobile.data.local.PriceEntity
 import com.easypocket.mobile.data.local.ProductDao
 import com.easypocket.mobile.data.local.ProductEntity
+import com.easypocket.mobile.data.local.ProductLastCategoryDao
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
+import com.easypocket.mobile.data.local.ShoppingListItemEntity
 import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Price
 import com.easypocket.mobile.domain.Product
@@ -14,6 +17,15 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
+
+// Everything a product delete takes down (prices, remembered categories and
+// the product's rows in shopping lists), kept so it can all be restored.
+data class DeletedProducts(
+    val products: List<ProductEntity>,
+    val prices: List<PriceEntity>,
+    val lastCategories: List<ProductLastCategoryEntity>,
+    val listItems: List<ShoppingListItemEntity>,
+)
 
 @Singleton
 class ProductRepository @Inject constructor(
@@ -67,10 +79,30 @@ class ProductRepository @Inject constructor(
         priceDao.insertAll(product.prices.map { PriceEntity(product.id, it.storeId, it.value) })
     }
 
-    suspend fun deleteAll(ids: List<String>) {
-        db.withTransaction {
+    suspend fun deleteAll(ids: List<String>): DeletedProducts? {
+        if (ids.isEmpty()) return null
+        return db.withTransaction {
+            val products = productDao.getAll().first().filter { it.id in ids }
+            if (products.isEmpty()) return@withTransaction null
+            val snapshot = DeletedProducts(
+                products = products,
+                prices = priceDao.getAll().first().filter { it.productId in ids },
+                lastCategories = db.productLastCategoryDao().getByProductIds(ids),
+                listItems = db.listDao().getItemsByProductIds(ids),
+            )
             db.productLastCategoryDao().deleteForProducts(ids)
             productDao.deleteByIds(ids)
+            snapshot
+        }
+    }
+
+    suspend fun restore(deletion: DeletedProducts) {
+        if (deletion.products.isEmpty()) return
+        db.withTransaction {
+            productDao.insertAll(deletion.products)
+            priceDao.insertAll(deletion.prices)
+            deletion.lastCategories.forEach { db.productLastCategoryDao().upsert(it) }
+            if (deletion.listItems.isNotEmpty()) db.listDao().insertItems(deletion.listItems)
         }
     }
 }

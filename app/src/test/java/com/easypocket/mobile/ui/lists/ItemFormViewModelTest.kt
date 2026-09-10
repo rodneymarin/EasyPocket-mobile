@@ -47,7 +47,7 @@ class ItemFormViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        storesRepository = StoreRepository(db.storeDao())
+        storesRepository = StoreRepository(db, db.storeDao(), db.priceDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db, db.listDao())
         settingsRepository = SettingsRepository(context)
@@ -171,10 +171,34 @@ class ItemFormViewModelTest {
 
         val editVm = vm()
         editVm.load("0oasidu0as9dua0sd", item.id)
-        var deleted = false
-        editVm.delete { deleted = true }
-        assertTrue(deleted)
+        val deleted = editVm.delete()
+        assertTrue(deleted != null)
         assertTrue(listsRepository.getById("0oasidu0as9dua0sd")!!.items.none { it.id == item.id })
+    }
+
+    @Test
+    fun `undoDelete restores the deleted item with the same id`() = runTest {
+        repos()
+        val listId = "0oasidu0as9dua0sd"
+        val vm = vm()
+        vm.load(listId, -1)
+        vm.selectProduct("prod-001")
+        vm.setStore("store-demo")
+        vm.setQuantity("2")
+        vm.save {}
+        val item = listsRepository.getById(listId)!!.items.first { it.productId == "prod-001" && it.quantity == 2.0 }
+
+        val editVm = vm()
+        editVm.load(listId, item.id)
+        val deleted = editVm.delete()!!
+        assertTrue(listsRepository.getById(listId)!!.items.none { it.id == item.id })
+
+        editVm.undoDelete(deleted)
+
+        val restored = listsRepository.getById(listId)!!.items.first { it.id == item.id }
+        assertEquals("prod-001", restored.productId)
+        assertEquals(2.0, restored.quantity, 0.001)
+        assertEquals("store-demo", restored.storeId)
     }
 
     @Test

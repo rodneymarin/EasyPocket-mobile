@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.i18n.LocalLanguage
 import com.easypocket.mobile.i18n.t
@@ -58,12 +59,13 @@ import com.easypocket.mobile.ui.components.ListIconCircle
 import com.easypocket.mobile.ui.components.ListIconField
 import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
+import com.easypocket.mobile.ui.components.rememberDataRestoredTick
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.formatAmount
 import com.easypocket.mobile.ui.theme.LocalAppColors
-import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -87,6 +89,12 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
     var listToDelete by remember { mutableStateOf<ListCardData?>(null) }
 
     LaunchedEffect(refreshTick) { vm.refresh() }
+
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val restoreTick = rememberDataRestoredTick(backStackEntry)
+    LaunchedEffect(restoreTick.value) {
+        if (restoreTick.value > 0L) vm.refresh()
+    }
 
     LaunchedEffect(searchText) {
         delay(SEARCH_DEBOUNCE_MS)
@@ -206,10 +214,17 @@ fun ListsScreen(navController: NavController, onMenuClick: () -> Unit, refreshTi
         onConfirm = {
             toDelete?.list?.id?.let { id ->
                 scope.launch {
-                    vm.deleteList(id)
+                    val deleted = vm.deleteList(id)
                     showDeleteSheet = false
                     listToDelete = null
-                    toast.show(t("toast.listDeleted", language), ToastType.SUCCESS)
+                    if (deleted != null) {
+                        toast.show(
+                            t("toast.listDeleted", language),
+                            ToastType.DESTRUCTIVE,
+                            actionLabel = t("common.undo", language),
+                            onAction = { vm.restoreList(deleted) },
+                        )
+                    }
                 }
             }
         },
@@ -291,7 +306,7 @@ private fun ListCardContent(
                             language,
                             mapOf(
                                 "count" to card.itemCount.toString(),
-                                "amount" to "$" + formatAmount(card.total),
+                                "amount" to formatAmount(language, card.total),
                             ),
                         )
                         else -> t("list.itemsCount", language, mapOf("count" to card.itemCount.toString()))
@@ -354,8 +369,6 @@ private fun EmptyState(text: String) {
         Text(text, color = appColors.textSecondary, fontSize = 16.sp)
     }
 }
-
-private fun formatAmount(value: Double): String = String.format(Locale.US, "%.2f", value)
 
 private fun Modifier.clickableNoIndication(onClick: () -> Unit): Modifier =
     this.then(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick))

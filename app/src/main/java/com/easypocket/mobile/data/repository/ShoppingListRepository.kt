@@ -50,7 +50,53 @@ class ShoppingListRepository @Inject constructor(
         return list
     }
 
-    suspend fun delete(id: String) = listDao.deleteById(id)
+    suspend fun delete(id: String): ShoppingList? {
+        val list = getById(id) ?: return null
+        listDao.deleteById(id)
+        return list
+    }
+
+    // Restores a deleted list together with its items, keeping the original
+    // ids so links (highlight, selection, clipboard) stay valid.
+    suspend fun restoreList(list: ShoppingList) {
+        db.withTransaction {
+            listDao.insert(ShoppingListEntity(list.id, list.title, list.icon, list.categoryId))
+            listDao.insertItems(
+                list.items.map {
+                    ShoppingListItemEntity(
+                        id = it.id,
+                        shoppingListId = list.id,
+                        productId = it.productId,
+                        storeId = it.storeId,
+                        categoryId = it.categoryId,
+                        quantity = it.quantity,
+                        done = it.done,
+                        pinned = it.pinned,
+                    )
+                },
+            )
+        }
+    }
+
+    suspend fun restoreItems(listId: String, items: List<ShoppingListItem>) {
+        if (items.isEmpty()) return
+        db.withTransaction {
+            listDao.insertItems(
+                items.map {
+                    ShoppingListItemEntity(
+                        id = it.id,
+                        shoppingListId = listId,
+                        productId = it.productId,
+                        storeId = it.storeId,
+                        categoryId = it.categoryId,
+                        quantity = it.quantity,
+                        done = it.done,
+                        pinned = it.pinned,
+                    )
+                },
+            )
+        }
+    }
 
     suspend fun rename(id: String, title: String, icon: String) =
         listDao.updateTitleAndIcon(id, title, icon)

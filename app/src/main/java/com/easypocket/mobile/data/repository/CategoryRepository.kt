@@ -5,7 +5,9 @@ import com.easypocket.mobile.data.local.CategoryDao
 import com.easypocket.mobile.data.local.CategoryEntity
 import com.easypocket.mobile.data.local.EasyPocketDatabase
 import com.easypocket.mobile.data.local.ProductLastCategoryDao
+import com.easypocket.mobile.data.local.ProductLastCategoryEntity
 import com.easypocket.mobile.data.local.ShoppingListDao
+import com.easypocket.mobile.data.local.ShoppingListEntity
 import com.easypocket.mobile.domain.Alphabet
 import com.easypocket.mobile.domain.Category
 import com.easypocket.mobile.domain.ListIcon
@@ -15,6 +17,15 @@ import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+
+// A category delete un-links items and lists from it and drops the
+// remembered product categories; this snapshot restores all of it.
+data class DeletedCategories(
+    val categories: List<CategoryEntity>,
+    val itemIdsByCategory: Map<String, List<Long>>,
+    val listIdsByCategory: Map<String, List<String>>,
+    val lastCategories: List<ProductLastCategoryEntity>,
+)
 
 @Singleton
 class CategoryRepository @Inject constructor(
@@ -44,12 +55,40 @@ class CategoryRepository @Inject constructor(
     suspend fun update(category: Category) =
         categoryDao.update(CategoryEntity(category.id, category.name, category.icon))
 
-    suspend fun deleteAll(ids: List<String>) {
-        db.withTransaction {
+    suspend fun deleteAll(ids: List<String>): DeletedCategories? {
+        if (ids.isEmpty()) return null
+        return db.withTransaction {
+            val categories = categoryDao.getAll().first().filter { it.id in ids }
+            if (categories.isEmpty()) return@withTransaction null
+            val snapshot = DeletedCategories(
+                categories = categories,
+                itemIdsByCategory = listDao.getItemsByCategoryIds(ids)
+                    .filter { it.categoryId in ids }
+                    .groupBy({ it.categoryId!! }, { it.id }),
+                listIdsByCategory = listDao.getListsByCategoryIds(ids)
+                    .filter { it.categoryId in ids }
+                    .groupBy({ it.categoryId!! }, { it.id }),
+                lastCategories = lastCategoryDao.getByCategoryIds(ids),
+            )
             listDao.clearCategory(ids)
             listDao.clearListCategory(ids)
             lastCategoryDao.deleteForCategories(ids)
             categoryDao.deleteByIds(ids)
+            snapshot
+        }
+    }
+
+    suspend fun restore(deletion: DeletedCategories) {
+        if (deletion.categories.isEmpty()) return
+        db.withTransaction {
+            deletion.categories.forEach { categoryDao.insert(it) }
+            deletion.itemIdsByCategory.forEach { (categoryId, ids) ->
+                listDao.setItemsCategoryByIds(ids, categoryId)
+            }
+            deletion.listIdsByCategory.forEach { (categoryId, ids) ->
+                ids.forEach { listDao.updateCategory(it, categoryId) }
+            }
+            deletion.lastCategories.forEach { lastCategoryDao.upsert(it) }
         }
     }
 

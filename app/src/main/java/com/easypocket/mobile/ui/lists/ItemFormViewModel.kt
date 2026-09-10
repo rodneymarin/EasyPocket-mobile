@@ -178,10 +178,16 @@ class ItemFormViewModel @Inject constructor(
         onSaved(savedId)
     }
 
-    suspend fun delete(onDeleted: () -> Unit) {
-        val itemId = originalItem?.id ?: return
-        listsRepository.removeItems(listOf(itemId))
-        onDeleted()
+    suspend fun delete(): ShoppingListItem? {
+        val item = originalItem ?: return null
+        listsRepository.removeItems(listOf(item.id))
+        return item
+    }
+
+    // Undo for delete(); the list id was captured while the form was loaded.
+    suspend fun undoDelete(item: ShoppingListItem) {
+        val listId = this.listId ?: return
+        listsRepository.restoreItems(listId, listOf(item))
     }
 
     suspend fun createProduct(name: String, unit: UnitOfMeasurement, prices: List<Price>): String? {

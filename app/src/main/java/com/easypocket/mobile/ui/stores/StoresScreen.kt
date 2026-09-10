@@ -59,6 +59,7 @@ import com.easypocket.mobile.ui.components.ListItemRow
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.rememberDataRestoredTick
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
@@ -81,6 +82,11 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
     val backStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(refreshTick) { vm.refresh() }
+
+    val restoreTick = rememberDataRestoredTick(backStackEntry)
+    LaunchedEffect(restoreTick.value) {
+        if (restoreTick.value > 0L) vm.refresh()
+    }
 
     LaunchedEffect(searchText) {
         delay(SEARCH_DEBOUNCE_MS)
@@ -160,9 +166,16 @@ fun StoresScreen(navController: NavController, onMenuClick: () -> Unit, refreshT
         confirmLabel = t("stores.deleteSelected.confirm", language),
         onConfirm = {
             scope.launch {
-                vm.deleteSelected()
+                val deleted = vm.deleteSelected()
                 showDeleteSheet = false
-                toast.show(t("toast.storesDeleted", language), ToastType.SUCCESS)
+                if (deleted != null) {
+                    toast.show(
+                        t("toast.storesDeleted", language),
+                        ToastType.DESTRUCTIVE,
+                        actionLabel = t("common.undo", language),
+                        onAction = { vm.restore(deleted) },
+                    )
+                }
             }
         },
         onDismiss = { showDeleteSheet = false },

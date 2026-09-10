@@ -44,7 +44,7 @@ class ProductListViewModelTest {
         Seeder(db).seedIfEmpty()
         vm = ProductListViewModel(
             productsRepository,
-            StoreRepository(db.storeDao()),
+            StoreRepository(db, db.storeDao(), db.priceDao()),
         )
         return vm
     }

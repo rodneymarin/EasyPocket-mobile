@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
@@ -28,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -37,27 +41,45 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.LaunchedEffect
+import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class ToastType { SUCCESS, ERROR, INFO, WARNING }
+enum class ToastType { SUCCESS, ERROR, INFO, WARNING, DESTRUCTIVE }
 
-data class ToastItem(val id: Long, val message: String, val type: ToastType)
+const val TOAST_DURATION_MS = 3000L
+const val DESTRUCTIVE_TOAST_DURATION_MS = 4000L
 
-private data class ToastStyle(val background: Color, val icon: ImageVector)
+data class ToastItem(
+    val id: Long,
+    val message: String,
+    val type: ToastType,
+    val actionLabel: String? = null,
+    val onAction: (suspend () -> Unit)? = null,
+    val durationMs: Long = if (type == ToastType.DESTRUCTIVE) DESTRUCTIVE_TOAST_DURATION_MS else TOAST_DURATION_MS,
+)
 
-private fun toastStyle(type: ToastType) = when (type) {
-    ToastType.SUCCESS -> ToastStyle(Color(0xFF4CAF50), Icons.Default.CheckCircle)
-    ToastType.ERROR -> ToastStyle(Color(0xFFF44336), Icons.Default.Error)
-    ToastType.INFO -> ToastStyle(Color(0xFF2196F3), Icons.Default.Info)
-    ToastType.WARNING -> ToastStyle(Color(0xFFFF9800), Icons.Default.Warning)
+private data class ToastStyle(val background: Color, val icon: ImageVector, val content: Color)
+
+// Destructive toasts match the app's delete buttons exactly: the themed
+// destructive background with destructiveBorder text in both themes.
+@Composable
+private fun toastStyle(type: ToastType): ToastStyle = when (type) {
+    ToastType.SUCCESS -> ToastStyle(Color(0xFF4CAF50), Icons.Default.CheckCircle, Color.White)
+    ToastType.ERROR -> ToastStyle(Color(0xFFF44336), Icons.Default.Error, Color.White)
+    ToastType.INFO -> ToastStyle(Color(0xFF2196F3), Icons.Default.Info, Color.White)
+    ToastType.WARNING -> ToastStyle(Color(0xFFFF9800), Icons.Default.Warning, Color.White)
+    ToastType.DESTRUCTIVE -> {
+        val appColors = LocalAppColors.current
+        ToastStyle(appColors.destructive, Icons.Default.Delete, appColors.destructiveBorder)
+    }
 }
 
 @Stable
@@ -66,8 +88,13 @@ class ToastState {
     val toasts: List<ToastItem> get() = _toasts
     private var nextId = 1L
 
-    fun show(message: String, type: ToastType = ToastType.SUCCESS) {
-        _toasts.add(ToastItem(id = nextId++, message = message, type = type))
+    fun show(
+        message: String,
+        type: ToastType = ToastType.SUCCESS,
+        actionLabel: String? = null,
+        onAction: (suspend () -> Unit)? = null,
+    ) {
+        _toasts.add(ToastItem(id = nextId++, message = message, type = type, actionLabel = actionLabel, onAction = onAction))
     }
 
     fun dismiss(id: Long) {
@@ -115,7 +142,7 @@ private fun ToastView(item: ToastItem, onDismiss: () -> Unit) {
 
     LaunchedEffect(item.id) {
         transition.targetState = true
-        delay(3000)
+        delay(item.durationMs)
         dismiss()
     }
 
@@ -147,16 +174,34 @@ private fun ToastView(item: ToastItem, onDismiss: () -> Unit) {
                 Icon(
                     style.icon,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = style.content,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
                     item.message,
-                    color = Color.White,
+                    color = style.content,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
                 )
+                if (item.actionLabel != null && item.onAction != null) {
+                    Text(
+                        text = item.actionLabel,
+                        color = style.content,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(start = 12.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(style.content.copy(alpha = 0.15f))
+                            .clickable {
+                                dismiss()
+                                scope.launch { item.onAction?.invoke() }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
             }
         }
     }

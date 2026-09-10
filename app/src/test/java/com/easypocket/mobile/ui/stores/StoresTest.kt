@@ -40,7 +40,7 @@ class StoresTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        storesRepository = StoreRepository(db.storeDao())
+        storesRepository = StoreRepository(db, db.storeDao(), db.priceDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db, db.listDao())
         Seeder(db).seedIfEmpty()
@@ -198,13 +198,12 @@ class StoresTest {
     }
 
     @Test
-    fun `delete removes the store and calls onDeleted`() = runTest {
+    fun `delete removes the store and returns its snapshot`() = runTest {
         repos()
         val vm = formVm()
         vm.load("store-demo")
-        var deleted = false
-        vm.delete { deleted = true }
-        assertTrue(deleted)
+        val deleted = vm.delete()
+        assertTrue(deleted != null)
         assertTrue(storesRepository.getAll().none { it.id == "store-demo" })
     }
 }

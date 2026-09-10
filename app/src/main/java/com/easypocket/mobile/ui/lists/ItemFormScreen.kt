@@ -61,6 +61,8 @@ import com.easypocket.mobile.ui.components.IconButtonCircle
 import com.easypocket.mobile.ui.components.KEY_NEWLY_ADDED_ID
 import com.easypocket.mobile.ui.components.LocalToastState
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.formatAmount
+import com.easypocket.mobile.ui.components.notifyDataRestored
 import com.easypocket.mobile.ui.products.ProductFormContent
 import com.easypocket.mobile.ui.products.ProductFormViewModel
 import com.easypocket.mobile.ui.products.ProductPickerSheet
@@ -68,7 +70,6 @@ import com.easypocket.mobile.ui.theme.LocalAppColors
 import com.easypocket.mobile.ui.theme.LocalIsDark
 import com.easypocket.mobile.ui.theme.StoreColors
 import com.easypocket.mobile.domain.Store
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 @Composable
@@ -300,7 +301,6 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
             onCancel = { showCreateProduct = false },
         )
     }
-
     AppBottomSheet(
         visible = showEditProduct,
         onDismiss = { showEditProduct = false },
@@ -316,9 +316,16 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
                 showEditProduct = false
                 toast.show(t("toast.productUpdated", language), ToastType.SUCCESS)
             },
-            onDeleted = {
+            onDeleted = { deleted ->
                 showEditProduct = false
-                toast.show(t("toast.productDeleted", language), ToastType.SUCCESS)
+                if (deleted != null) {
+                    toast.show(
+                        t("toast.productDeleted", language),
+                        ToastType.DESTRUCTIVE,
+                        actionLabel = t("common.undo", language),
+                        onAction = { editProductVm.restore(deleted) },
+                    )
+                }
                 vm.clearForm()
             },
             onCancel = { showEditProduct = false },
@@ -333,9 +340,18 @@ fun ItemFormScreen(navController: NavController, listId: String, itemId: Long) {
         onConfirm = {
             showDeleteConfirm = false
             scope.launch {
-                vm.delete {
-                    goBack()
-                    toast.show(t("toast.itemDeleted", language), ToastType.SUCCESS)
+                val deleted = vm.delete()
+                goBack()
+                if (deleted != null) {
+                    toast.show(
+                        t("toast.itemDeleted", language),
+                        ToastType.DESTRUCTIVE,
+                        actionLabel = t("common.undo", language),
+                        onAction = {
+                            vm.undoDelete(deleted)
+                            navController.notifyDataRestored()
+                        },
+                    )
                 }
             }
         },
@@ -395,8 +411,8 @@ private fun StoreTagSelector(
 @Composable
 private fun PriceSummary(unitPrice: Double?, totalPrice: Double?, language: com.easypocket.mobile.i18n.Language) {
     val appColors = LocalAppColors.current
-    val unitText = unitPrice?.let { "$" + formatAmount(it) } ?: "—"
-    val totalText = totalPrice?.let { "$" + formatAmount(it) } ?: "—"
+    val unitText = unitPrice?.let { formatAmount(language, it) } ?: "—"
+    val totalText = totalPrice?.let { formatAmount(language, it) } ?: "—"
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -419,5 +435,3 @@ private fun PriceSummary(unitPrice: Double?, totalPrice: Double?, language: com.
         }
     }
 }
-
-private fun formatAmount(value: Double): String = String.format(Locale.US, "%.2f", value)

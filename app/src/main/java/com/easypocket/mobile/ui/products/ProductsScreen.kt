@@ -79,6 +79,8 @@ import com.easypocket.mobile.ui.components.SearchInput
 import com.easypocket.mobile.ui.components.Tag
 import com.easypocket.mobile.ui.components.TagSize
 import com.easypocket.mobile.ui.components.ToastType
+import com.easypocket.mobile.ui.components.rememberDataRestoredTick
+import com.easypocket.mobile.ui.components.formatAmount
 import com.easypocket.mobile.ui.theme.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,6 +101,11 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
     val backStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(refreshTick) { vm.refresh() }
+
+    val restoreTick = rememberDataRestoredTick(backStackEntry)
+    LaunchedEffect(restoreTick.value) {
+        if (restoreTick.value > 0L) vm.refresh()
+    }
 
     LaunchedEffect(searchText) {
         delay(SEARCH_DEBOUNCE_MS)
@@ -178,9 +185,16 @@ fun ProductsScreen(navController: NavController, onMenuClick: () -> Unit, refres
         confirmLabel = t("products.deleteSelected.confirm", language),
         onConfirm = {
             scope.launch {
-                vm.deleteSelected()
+                val deleted = vm.deleteSelected()
                 showDeleteSheet = false
-                toast.show(t("toast.productsDeleted", language), ToastType.SUCCESS)
+                if (deleted != null) {
+                    toast.show(
+                        t("toast.productsDeleted", language),
+                        ToastType.DESTRUCTIVE,
+                        actionLabel = t("common.undo", language),
+                        onAction = { vm.restore(deleted) },
+                    )
+                }
             }
         },
         onDismiss = { showDeleteSheet = false },
@@ -352,7 +366,7 @@ private fun ProductPricesList(product: Product, stores: List<Store>) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "$${formatAmount(price.value)}",
+                    text = formatAmount(LocalLanguage.current, price.value),
                     color = appColors.text,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -361,8 +375,6 @@ private fun ProductPricesList(product: Product, stores: List<Store>) {
         }
     }
 }
-
-private fun formatAmount(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)
 
 @Composable
 private fun SelectionCircle(isSelected: Boolean, appColors: com.easypocket.mobile.ui.theme.AppColors) {

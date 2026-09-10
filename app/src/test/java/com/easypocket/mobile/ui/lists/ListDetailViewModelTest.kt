@@ -13,6 +13,7 @@ import com.easypocket.mobile.data.repository.StoreRepository
 import com.easypocket.mobile.data.seed.SeedData
 import com.easypocket.mobile.data.seed.Seeder
 import com.easypocket.mobile.domain.ListLogic
+import com.easypocket.mobile.domain.UnitOfMeasurement
 import com.easypocket.mobile.i18n.Language
 import com.easypocket.mobile.settings.SettingsRepository
 import com.easypocket.mobile.util.MainDispatcherRule
@@ -46,7 +47,7 @@ class ListDetailViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, EasyPocketDatabase::class.java)
             .allowMainThreadQueries().build()
-        storesRepository = StoreRepository(db.storeDao())
+        storesRepository = StoreRepository(db, db.storeDao(), db.priceDao())
         productsRepository = ProductRepository(db, db.productDao(), db.priceDao())
         listsRepository = ShoppingListRepository(db, db.listDao())
         Seeder(db).seedIfEmpty()
@@ -351,6 +352,65 @@ class ListDetailViewModelTest {
         assertTrue(vm.uiState.value.list!!.items.none { it.productId == "prod-004" || it.productId == "prod-005" })
         vm.load(listId)
         assertEquals(2, vm.uiState.value.list!!.items.size)
+    }
+
+    @Test
+    fun `deleteSelected returns snapshot and undo restores the items`() = runTest {
+        val vm = createVm()
+        val listId = "aosidoaisud0a89sud0a9sdui"
+        vm.load(listId)
+        val item1 = vm.uiState.value.list!!.items.first { it.productId == "prod-004" }
+        val item2 = vm.uiState.value.list!!.items.first { it.productId == "prod-005" }
+        vm.setSelection(setOf(item1.id, item2.id))
+        val deleted = vm.deleteSelected()
+        assertEquals(setOf(item1.id, item2.id), deleted.map { it.id }.toSet())
+
+        vm.restoreItems(deleted)
+
+        vm.load(listId)
+        val restored = vm.uiState.value.list!!.items
+        assertEquals(4, restored.size)
+        assertEquals(item1, restored.first { it.id == item1.id })
+        assertEquals(item2, restored.first { it.id == item2.id })
+    }
+
+    @Test
+    fun `removeCompleted returns snapshot and undo restores the done items`() = runTest {
+        val vm = createVm()
+        val listId = "aosidoaisud0a89sud0a9sdui"
+        vm.load(listId)
+        val item1 = vm.uiState.value.list!!.items.first { it.productId == "prod-004" }
+        val item2 = vm.uiState.value.list!!.items.first { it.productId == "prod-005" }
+        vm.toggleDone(item1)
+        vm.toggleDone(item2)
+        val deleted = vm.removeCompleted()
+        assertEquals(2, deleted.size)
+        assertTrue(deleted.all { it.done })
+
+        vm.restoreItems(deleted)
+
+        vm.load(listId)
+        assertEquals(4, vm.uiState.value.list!!.items.size)
+        val restored1 = vm.uiState.value.list!!.items.first { it.id == item1.id }
+        assertTrue(restored1.done)
+    }
+
+    @Test
+    fun `restoreItems skips items whose product no longer exists`() = runTest {
+        val vm = createVm()
+        val list = listsRepository.create("L")
+        val product = productsRepository.create("Fugaz", UnitOfMeasurement.UNIT)
+        listsRepository.addItem(list.id, product.id, null, 1.0)
+        vm.load(list.id)
+        val item = vm.uiState.value.list!!.items.first()
+        val snapshot = productsRepository.deleteAll(listOf(product.id))!!
+        vm.load(list.id)
+
+        vm.restoreItems(listOf(item))
+
+        vm.load(list.id)
+        assertEquals(0, vm.uiState.value.list!!.items.size)
+        productsRepository.restore(snapshot)
     }
 
     @Test

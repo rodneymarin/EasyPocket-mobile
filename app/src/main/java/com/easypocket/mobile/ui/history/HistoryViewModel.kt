@@ -81,7 +81,11 @@ class HistoryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(rangeDays = days)
     }
 
-    suspend fun deleteRecord(id: String) {
-        historyRepository.delete(id)
+    suspend fun deleteRecord(record: PurchaseHistoryWithItems) {
+        historyRepository.delete(record.record.id)
+    }
+
+    suspend fun restoreRecord(record: PurchaseHistoryWithItems) {
+        historyRepository.restore(record)
     }
 }

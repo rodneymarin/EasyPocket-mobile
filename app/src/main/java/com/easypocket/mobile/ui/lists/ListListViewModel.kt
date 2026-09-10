@@ -78,8 +78,14 @@ class ListListViewModel @Inject constructor(
         return list.id
     }
 
-    suspend fun deleteList(id: String) {
-        listsRepository.delete(id)
+    suspend fun deleteList(id: String): ShoppingList? {
+        val deleted = listsRepository.delete(id)
+        refresh()
+        return deleted
+    }
+
+    suspend fun restoreList(list: ShoppingList) {
+        listsRepository.restoreList(list)
         refresh()
     }
 
