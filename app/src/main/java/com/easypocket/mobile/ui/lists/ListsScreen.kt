@@ -2,7 +2,6 @@ package com.easypocket.mobile.ui.lists
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -286,14 +285,8 @@ private fun ListCardContent(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                card.category?.let { category ->
-                    Tag(
-                        text = "${category.icon} ${category.name}",
-                        size = TagSize.SM,
-                    )
-                }
-                Tag(
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
                     text = when {
                         card.itemCount == 0 -> t("list.emptyTag", language)
                         card.hasPricedItems -> t(
@@ -306,15 +299,27 @@ private fun ListCardContent(
                         )
                         else -> t("list.itemsCount", language, mapOf("count" to card.itemCount.toString()))
                     },
-                    size = TagSize.SM,
+                    color = appColors.text,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
+                card.category?.let { category ->
+                    Tag(
+                        text = "${category.icon} ${category.name}",
+                        size = TagSize.SM,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FieldLabelSmall(text: String) {    val appColors = LocalAppColors.current
+private fun FieldLabelSmall(text: String) {
+    val appColors = LocalAppColors.current
     Text(text, color = appColors.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 }
 
